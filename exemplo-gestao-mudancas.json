@@ -1,0 +1,379 @@
+{
+  "plans": [
+    {
+      "id": "plan_exemplo_transformacao_digital",
+      "name": "Implantação do Novo Sistema Integrado de Atendimento",
+      "description": "Exemplo de plano para estruturar a mudança decorrente da implantação de um sistema integrado, com revisão de processos, papéis, dados e comunicação.",
+      "date": "2026-09-08",
+      "facilitator": "Equipe de Transformação e Processos",
+      "groups": [
+        {
+          "id": "group_processos",
+          "name": "Grupo 1 — Processos e Normas",
+          "description": "Mapear impactos nos fluxos de atendimento, regras e procedimentos.",
+          "validationDone": true,
+          "facts": [
+            {
+              "id": "fact_proc_1",
+              "text": "O novo sistema substituirá formulários e controles paralelos usados no atendimento.",
+              "notes": "A implantação exige revisão dos fluxos atuais e retirada gradual de controles manuais."
+            },
+            {
+              "id": "fact_proc_2",
+              "text": "As solicitações passarão a tramitar integralmente em ambiente digital.",
+              "notes": "O novo fluxo permitirá rastreabilidade ponta a ponta."
+            }
+          ],
+          "impacts": [
+            {
+              "id": "impact_proc_1",
+              "factId": "fact_proc_1",
+              "dimension": "Processo",
+              "item": "Registro inicial da solicitação",
+              "from": "Preenchimento manual, planilhas e controles descentralizados",
+              "to": "Registro único no sistema integrado com protocolo automático",
+              "notes": "Necessidade de eliminar duplicidade de registros."
+            },
+            {
+              "id": "impact_proc_2",
+              "factId": "fact_proc_2",
+              "dimension": "Norma",
+              "item": "Procedimento de encaminhamento e aprovação",
+              "from": "Encaminhamentos por e-mail e documentos anexos",
+              "to": "Tramitação eletrônica com etapas, responsáveis e aprovações registradas no sistema",
+              "notes": "Será necessário revisar procedimentos internos."
+            }
+          ],
+          "responsibilities": [
+            {
+              "id": "resp_proc_1",
+              "impactId": "impact_proc_1",
+              "executes": "Coordenação de Atendimento",
+              "supports": "Equipe de Processos; TI",
+              "decides": "Diretoria responsável pelo atendimento",
+              "informed": "Unidades usuárias",
+              "notes": "A Coordenação será responsável pelo redesenho operacional."
+            },
+            {
+              "id": "resp_proc_2",
+              "impactId": "impact_proc_2",
+              "executes": "Equipe de Processos",
+              "supports": "Assessoria Jurídica; Coordenação de Atendimento",
+              "decides": "Diretoria Administrativa",
+              "informed": "Gestores das unidades",
+              "notes": "A revisão normativa deverá ocorrer antes da entrada em produção."
+            }
+          ],
+          "validations": [
+            {
+              "id": "val_proc_1",
+              "impactId": "impact_proc_1",
+              "comment": "Prever tratamento específico para demandas recebidas em contingência, quando o sistema estiver indisponível.",
+              "origin": "Grupo 3 — Pessoas e Comunicação",
+              "type": "Lacuna",
+              "status": "Incorporada",
+              "adjustment": "Criar procedimento de contingência e posterior registro no sistema."
+            },
+            {
+              "id": "val_proc_2",
+              "impactId": "impact_proc_2",
+              "comment": "Avaliar se todas as aprovações atuais precisam ser mantidas no novo fluxo.",
+              "origin": "Plenária",
+              "type": "Sugestão",
+              "status": "Pendente de decisão",
+              "adjustment": ""
+            }
+          ],
+          "actions": [
+            {
+              "id": "action_proc_1",
+              "impactId": "impact_proc_1",
+              "what": "Redesenhar e aprovar o fluxo de registro e tramitação das solicitações.",
+              "who": "Coordenação de Atendimento e Equipe de Processos",
+              "due": "30/10/2026",
+              "verify": "Fluxo futuro aprovado e publicado no repositório institucional.",
+              "status": "Madura para compromisso",
+              "adjustment": "",
+              "adjustOwner": "",
+              "pendingDecision": "",
+              "decisionOwner": "",
+              "justification": ""
+            },
+            {
+              "id": "action_proc_2",
+              "impactId": "impact_proc_2",
+              "what": "Revisar os procedimentos e normas internas relacionados ao encaminhamento e aprovação.",
+              "who": "Equipe de Processos",
+              "due": "20/11/2026",
+              "verify": "Procedimento revisado, validado e comunicado às unidades.",
+              "status": "Precisa de ajuste",
+              "adjustment": "Confirmar quais aprovações serão mantidas no fluxo futuro.",
+              "adjustOwner": "Diretoria Administrativa",
+              "pendingDecision": "",
+              "decisionOwner": "",
+              "justification": ""
+            }
+          ]
+        },
+        {
+          "id": "group_sistemas_dados",
+          "name": "Grupo 2 — Sistemas e Dados",
+          "description": "Avaliar integrações, cadastros, qualidade de dados e responsabilidades técnicas.",
+          "validationDone": true,
+          "facts": [
+            {
+              "id": "fact_sys_1",
+              "text": "O novo sistema integrará dados que hoje estão distribuídos em diferentes bases.",
+              "notes": "A integração reduzirá retrabalho, mas exige padronização cadastral."
+            },
+            {
+              "id": "fact_sys_2",
+              "text": "Indicadores operacionais passarão a ser gerados automaticamente a partir dos registros do sistema.",
+              "notes": "A qualidade do dado de origem será determinante para a confiabilidade dos indicadores."
+            }
+          ],
+          "impacts": [
+            {
+              "id": "impact_sys_1",
+              "factId": "fact_sys_1",
+              "dimension": "Dado",
+              "item": "Cadastro de usuários e unidades",
+              "from": "Cadastros duplicados e mantidos em bases distintas",
+              "to": "Cadastro mestre único, validado e integrado ao novo sistema",
+              "notes": "Necessária definição do responsável pelo dado mestre."
+            },
+            {
+              "id": "impact_sys_2",
+              "factId": "fact_sys_2",
+              "dimension": "Sistema",
+              "item": "Painel de indicadores operacionais",
+              "from": "Consolidação manual mensal em planilhas",
+              "to": "Indicadores atualizados automaticamente a partir dos registros transacionais",
+              "notes": "Definir critérios de qualidade e periodicidade."
+            }
+          ],
+          "responsibilities": [
+            {
+              "id": "resp_sys_1",
+              "impactId": "impact_sys_1",
+              "executes": "Equipe de Dados",
+              "supports": "TI; Unidades de negócio",
+              "decides": "Gerência de Tecnologia",
+              "informed": "Gestores das unidades",
+              "notes": "O cadastro mestre será tratado como dado corporativo."
+            },
+            {
+              "id": "resp_sys_2",
+              "impactId": "impact_sys_2",
+              "executes": "Equipe de BI",
+              "supports": "Equipe de Dados; Coordenação de Atendimento",
+              "decides": "Gerência de Tecnologia",
+              "informed": "Diretoria; Gestores",
+              "notes": "Os indicadores deverão ter definição de negócio homologada."
+            }
+          ],
+          "validations": [
+            {
+              "id": "val_sys_1",
+              "impactId": "impact_sys_1",
+              "comment": "Definir quem terá autoridade para corrigir inconsistências no cadastro mestre.",
+              "origin": "Grupo 1 — Processos e Normas",
+              "type": "Lacuna",
+              "status": "Incorporada",
+              "adjustment": "Incluir papel de gestor do dado no modelo de governança."
+            },
+            {
+              "id": "val_sys_2",
+              "impactId": "impact_sys_2",
+              "comment": "Manter durante dois meses a conferência entre o painel automático e o relatório antigo.",
+              "origin": "Plenária",
+              "type": "Sugestão",
+              "status": "Incorporada",
+              "adjustment": "Prever período de validação paralela após a implantação."
+            }
+          ],
+          "actions": [
+            {
+              "id": "action_sys_1",
+              "impactId": "impact_sys_1",
+              "what": "Definir e implantar o cadastro mestre de usuários e unidades.",
+              "who": "Equipe de Dados e TI",
+              "due": "15/11/2026",
+              "verify": "Base mestre homologada, sem duplicidades críticas e integrada ao sistema.",
+              "status": "Madura para compromisso",
+              "adjustment": "",
+              "adjustOwner": "",
+              "pendingDecision": "",
+              "decisionOwner": "",
+              "justification": ""
+            },
+            {
+              "id": "action_sys_2",
+              "impactId": "impact_sys_2",
+              "what": "Construir e homologar painel de indicadores operacionais do novo sistema.",
+              "who": "Equipe de BI",
+              "due": "15/12/2026",
+              "verify": "Painel publicado e homologado pela área de negócio.",
+              "status": "Em elaboração",
+              "adjustment": "",
+              "adjustOwner": "",
+              "pendingDecision": "",
+              "decisionOwner": "",
+              "justification": ""
+            }
+          ]
+        },
+        {
+          "id": "group_pessoas",
+          "name": "Grupo 3 — Pessoas e Comunicação",
+          "description": "Avaliar competências, comunicação, treinamento, suporte e adesão à mudança.",
+          "validationDone": false,
+          "facts": [
+            {
+              "id": "fact_people_1",
+              "text": "Os usuários terão novas responsabilidades e precisarão operar diretamente o sistema.",
+              "notes": "A implantação altera a rotina de servidores e gestores."
+            },
+            {
+              "id": "fact_people_2",
+              "text": "O acompanhamento das demandas ficará mais transparente para gestores e solicitantes.",
+              "notes": "Haverá mudança na forma de cobrança, acompanhamento e comunicação."
+            }
+          ],
+          "impacts": [
+            {
+              "id": "impact_people_1",
+              "factId": "fact_people_1",
+              "dimension": "Competência",
+              "item": "Capacidade de operar o novo sistema",
+              "from": "Conhecimento concentrado em poucos servidores e atividades manuais",
+              "to": "Usuários capacitados para registrar, tramitar e acompanhar demandas diretamente no sistema",
+              "notes": "Treinamento deve combinar conteúdo funcional e prática."
+            },
+            {
+              "id": "impact_people_2",
+              "factId": "fact_people_2",
+              "dimension": "Pessoas",
+              "item": "Rotina de acompanhamento e cobrança",
+              "from": "Cobranças por e-mail, telefone e controles locais",
+              "to": "Acompanhamento por status, prazo e responsável visível no sistema",
+              "notes": "Pode haver resistência inicial à maior transparência."
+            }
+          ],
+          "responsibilities": [
+            {
+              "id": "resp_people_1",
+              "impactId": "impact_people_1",
+              "executes": "Equipe de Capacitação",
+              "supports": "TI; Multiplicadores das unidades",
+              "decides": "Coordenação de Gestão de Pessoas",
+              "informed": "Todos os usuários do sistema",
+              "notes": "Treinamento por perfil de usuário."
+            },
+            {
+              "id": "resp_people_2",
+              "impactId": "impact_people_2",
+              "executes": "Gestores das unidades",
+              "supports": "Comunicação; Equipe do Projeto",
+              "decides": "Diretoria responsável",
+              "informed": "Servidores e solicitantes",
+              "notes": "Gestores precisam reforçar o novo modelo de acompanhamento."
+            }
+          ],
+          "validations": [
+            {
+              "id": "val_people_1",
+              "impactId": "impact_people_1",
+              "comment": "Criar materiais rápidos de consulta além do treinamento formal.",
+              "origin": "Grupo 2 — Sistemas e Dados",
+              "type": "Complemento",
+              "status": "Incorporada",
+              "adjustment": "Incluir guias rápidos e vídeos curtos no plano de capacitação."
+            },
+            {
+              "id": "val_people_2",
+              "impactId": "impact_people_2",
+              "comment": "Definir canal de suporte específico para as primeiras semanas de implantação.",
+              "origin": "Plenária",
+              "type": "Sugestão",
+              "status": "Pendente de decisão",
+              "adjustment": ""
+            }
+          ],
+          "actions": [
+            {
+              "id": "action_people_1",
+              "impactId": "impact_people_1",
+              "what": "Executar capacitação por perfil de usuário antes da entrada em produção.",
+              "who": "Equipe de Capacitação",
+              "due": "15/01/2027",
+              "verify": "Pelo menos 90% dos usuários prioritários capacitados e avaliados.",
+              "status": "Madura para compromisso",
+              "adjustment": "",
+              "adjustOwner": "",
+              "pendingDecision": "",
+              "decisionOwner": "",
+              "justification": ""
+            },
+            {
+              "id": "action_people_2",
+              "impactId": "impact_people_2",
+              "what": "Implantar plano de comunicação e suporte intensivo para o início da operação.",
+              "who": "Comunicação e Equipe do Projeto",
+              "due": "31/01/2027",
+              "verify": "Plano publicado, canais divulgados e suporte de implantação operando.",
+              "status": "Pendente de decisão",
+              "adjustment": "",
+              "adjustOwner": "",
+              "pendingDecision": "Definir duração e equipe dedicada ao suporte intensivo.",
+              "decisionOwner": "Diretoria responsável",
+              "justification": ""
+            }
+          ]
+        }
+      ],
+      "consolidatedActions": [
+        {
+          "id": "cons_1",
+          "sourceActionIds": [
+            "action_proc_1"
+          ],
+          "what": "Redesenhar, aprovar e comunicar o fluxo futuro de registro e tramitação das solicitações.",
+          "who": "Coordenação de Atendimento e Equipe de Processos",
+          "due": "30/10/2026",
+          "verify": "Fluxo futuro aprovado, publicado e comunicado às unidades.",
+          "status": "Madura para compromisso",
+          "notes": "Origem: Grupo 1 — Processos e Normas"
+        },
+        {
+          "id": "cons_2",
+          "sourceActionIds": [
+            "action_sys_1"
+          ],
+          "what": "Implantar cadastro mestre único de usuários e unidades para suportar o novo sistema.",
+          "who": "Equipe de Dados e TI",
+          "due": "15/11/2026",
+          "verify": "Cadastro homologado e integrado ao sistema, sem duplicidades críticas.",
+          "status": "Madura para compromisso",
+          "notes": "Origem: Grupo 2 — Sistemas e Dados"
+        },
+        {
+          "id": "cons_3",
+          "sourceActionIds": [
+            "action_people_1",
+            "action_people_2"
+          ],
+          "what": "Preparar usuários e gestores para a entrada em produção por meio de capacitação, comunicação e suporte assistido.",
+          "who": "Equipe de Capacitação, Comunicação e Equipe do Projeto",
+          "due": "31/01/2027",
+          "verify": "90% dos usuários prioritários capacitados, comunicação executada e suporte de implantação ativo.",
+          "status": "Em elaboração",
+          "notes": "Ação consolidada a partir do Grupo 3 — Pessoas e Comunicação."
+        }
+      ]
+    }
+  ],
+  "activePlanId": null,
+  "activeGroupId": null,
+  "stage": "overview"
+}

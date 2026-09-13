@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestão de Mudanças</title>
+<style>
+:root{
+  --blue:#245487;--blue2:#3f78ad;--light:#ddecf5;--bg:#f7f9fb;--text:#263238;
+  --muted:#667784;--border:#d7e0e7;--white:#fff;--ok:#2f7d5b;--warn:#a96914;
+  --danger:#a93d3d;--shadow:0 8px 24px rgba(35,55,75,.08);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+button:focus,input:focus,select:focus,textarea:focus{outline:3px solid rgba(36,84,135,.18);outline-offset:1px}
+a{color:inherit}
+.hidden{display:none!important}
+.muted{color:var(--muted)}
+.small{font-size:.86rem}
+.tag{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;background:#eef3f6;border:1px solid var(--border);font-size:.78rem}
+.status-ok{color:var(--ok);background:#eaf5ef;border-color:#b8ddc8}
+.status-warn{color:var(--warn);background:#fff4e4;border-color:#edd1a4}
+.status-danger{color:var(--danger);background:#fdeeee;border-color:#efc1c1}
+.btn{border:1px solid var(--border);background:#fff;color:var(--text);border-radius:8px;padding:10px 14px;min-height:42px;font-weight:650}
+.btn:hover{border-color:#aebdca;background:#fbfdff}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.primary:hover{background:#1d466f}
+.btn.soft{background:var(--light);border-color:#b8d7e7;color:#173e68}
+.btn.danger{color:var(--danger);border-color:#e3baba;background:#fff8f8}
+.btn.ghost{background:transparent}
+.btn.sm{padding:7px 10px;min-height:34px;font-size:.84rem}
+.iconbtn{border:0;background:transparent;padding:6px 8px;border-radius:7px}
+.iconbtn:hover{background:#eef3f6}
+.card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:var(--shadow)}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label{font-size:.8rem;font-weight:750;color:#526472}
+input,select,textarea{width:100%;border:1px solid #c9d5de;border-radius:8px;padding:10px 11px;background:#fff;color:var(--text);min-height:42px}
+textarea{min-height:88px;resize:vertical}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.space{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.divider{height:1px;background:var(--border);margin:14px 0}
+.empty{padding:28px;border:1px dashed #b9c8d4;border-radius:10px;text-align:center;color:var(--muted);background:#fbfdff}
+.tablewrap{overflow:auto;border:1px solid var(--border);border-radius:10px;background:#fff}
+table{width:100%;border-collapse:collapse;min-width:760px}
+th,td{padding:10px;border-bottom:1px solid var(--border);vertical-align:top;text-align:left}
+th{background:#f0f4f7;color:#425563;font-size:.8rem;position:sticky;top:0;z-index:1}
+td{font-size:.9rem}
+.progress{height:8px;background:#e4ebf0;border-radius:999px;overflow:hidden}
+.progress>span{display:block;height:100%;background:var(--blue);width:0}
+.topbar{height:66px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:20}
+.brand{display:flex;align-items:center;gap:12px}
+.brandmark{width:36px;height:36px;border-radius:9px;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:900}
+.brand strong{color:var(--blue);letter-spacing:.2px}
+.home{max-width:1180px;margin:0 auto;padding:28px 20px 56px}
+.hero{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin:8px 0 24px}
+.hero h1{margin:0;color:var(--blue);font-size:2rem}
+.plan-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.plan-card h3{margin:0 0 6px;color:var(--blue)}
+.plan-meta{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.shell{display:grid;grid-template-columns:245px minmax(0,1fr);min-height:calc(100vh - 66px)}
+.sidebar{background:#fff;border-right:1px solid var(--border);padding:18px 14px;position:sticky;top:66px;align-self:start;height:calc(100vh - 66px);overflow:auto}
+.side-head{padding:8px 8px 14px;border-bottom:1px solid var(--border);margin-bottom:10px}
+.side-nav{display:flex;flex-direction:column;gap:5px}
+.side-nav button{width:100%;text-align:left;border:0;background:transparent;padding:10px;border-radius:8px;color:#4a5d6a;font-weight:650}
+.side-nav button:hover{background:#f2f6f9}
+.side-nav button.active{background:var(--light);color:#143f69}
+.side-nav .done::after{content:" ✓";color:var(--ok)}
+.content{min-width:0;padding:22px 24px 70px}
+.content-inner{max-width:1220px;margin:0 auto}
+.contextbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.contextbar h1{margin:0;font-size:1.45rem;color:var(--blue)}
+.stage-track{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0 18px}
+.stage-pill{position:relative;border:1px solid var(--border);background:#fff;border-radius:9px;padding:9px 10px;text-align:center;font-size:.78rem;font-weight:750;color:#60717d}
+.stage-pill.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.stage-pill.done{border-color:#b9d8c7;color:var(--ok)}
+.metric-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.metric{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px}
+.metric strong{display:block;font-size:1.45rem;color:var(--blue)}
+.metric span{font-size:.78rem;color:var(--muted)}
+.steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.step-card{background:#fff;border:1px solid var(--border);border-radius:11px;padding:15px;min-width:0}
+.step-no{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--blue);color:white;font-weight:800}
+.step-card h3{margin:12px 0 4px;color:var(--blue)}
+.step-card p{font-size:.86rem;line-height:1.45}
+.stage-footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:22px;border-top:1px solid var(--border);padding-top:16px}
+.groupbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.group-chip{border:1px solid var(--border);background:#fff;border-radius:999px;padding:8px 12px;font-weight:650}
+.group-chip.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.record{border:1px solid var(--border);border-radius:10px;background:#fff;padding:15px}
+.record h4{margin:0;color:var(--blue)}
+.impact-chain{display:grid;grid-template-columns:1.1fr .8fr 1.1fr 1.1fr;gap:10px;margin-top:10px}
+.chain-cell{border:1px solid var(--border);background:#f8fafc;border-radius:8px;padding:10px;min-width:0}
+.chain-cell b{display:block;font-size:.73rem;color:#60717d;margin-bottom:4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.modal-back{position:fixed;inset:0;background:rgba(20,36,52,.42);display:grid;place-items:center;padding:18px;z-index:80}
+.modal{background:#fff;border-radius:13px;border:1px solid var(--border);box-shadow:0 18px 70px rgba(0,0,0,.18);width:min(760px,100%);max-height:90vh;overflow:auto;padding:20px}
+.modal h2{margin:0 0 14px;color:var(--blue)}
+.toast{position:fixed;right:20px;bottom:20px;background:#203746;color:#fff;padding:11px 14px;border-radius:9px;z-index:100;box-shadow:var(--shadow);opacity:0;transform:translateY(8px);pointer-events:none;transition:.18s}
+.toast.show{opacity:1;transform:translateY(0)}
+.report-print{display:none}
+.mobile-menu{display:none}
+.header-logo{display:flex;align-items:center;gap:18px}
+.header-logo img{height:58px;max-width:290px;width:auto;display:block;object-fit:contain}
+.header-logo img.logo-fdc{height:36px;max-width:165px}
+.print-header{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1.5px solid #245487;padding-bottom:5px;margin-bottom:9px}
+.print-header-text{min-width:0}
+.print-header-text h1{margin:0;font-size:14pt;line-height:1.05;letter-spacing:.1px}
+.print-header-text h2{margin:3px 0 0;font-size:10.5pt;line-height:1.15;font-weight:700}
+.print-logos{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.print-logo{width:122px;max-height:52px;object-fit:contain}
+.print-logo.logo-fdc{width:92px;max-height:40px}
+.print-meta{font-size:8.5pt;color:#4d5d68;line-height:1.3;margin:0 0 8px}
+.report-page,.partial-page{break-after:page;page-break-after:always}
+.report-page:last-child,.partial-page:last-child{break-after:auto;page-break-after:auto}
+
+@media(max-width:1050px){
+  .plan-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .metric-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .impact-chain{grid-template-columns:1fr 1fr}
+}
+@media(max-width:760px){
+  .topbar{padding:0 14px}.brand small{display:none}
+  .mobile-menu{display:inline-flex}
+  .shell{grid-template-columns:1fr}
+  .sidebar{display:none;position:static;height:auto;border-right:0;border-bottom:1px solid var(--border)}
+  .sidebar.open{display:block}
+  .content{padding:16px 12px 60px}
+  .plan-grid,.grid2,.grid3,.metric-grid,.steps,.impact-chain{grid-template-columns:1fr}
+  .stage-track{display:flex;overflow:auto;padding-bottom:4px}
+  .stage-pill{min-width:118px}
+  .hero{align-items:flex-start;flex-direction:column}
+}
+@media print{
+  @page{size:A4 landscape;margin:9mm}
+  body{background:#fff}
+  .topbar,.shell,.toast,.modal-back{display:none!important}
+  .report-print{display:block!important;color:#1f2933;padding:0;font-family:Arial,sans-serif}
+  .report-print h1,.report-print h2,.report-print h3{color:#245487}
+  .report-print h2{font-size:14pt;margin:8px 0 7px}
+  .report-print h3{
+    font-size:10.5pt;
+    margin:10px 0 5px;
+    padding:5px 7px;
+    background:#eaf2f7;
+    border-left:3px solid #245487;
+    break-after:avoid;
+    page-break-after:avoid
+  }
+  .report-print p{font-size:9pt;margin:5px 0 8px}
+  .report-print table{
+    width:100%;
+    min-width:0;
+    font-size:8.4pt;
+    border-collapse:collapse;
+    table-layout:fixed;
+    margin:0 0 8px;
+    border:1px solid #9fb0bd
+  }
+  .report-print th{
+    background:#245487!important;
+    color:#fff!important;
+    font-weight:700;
+    border:1px solid #1d466f;
+    padding:5px 6px;
+    line-height:1.2;
+    vertical-align:middle
+  }
+  .report-print td{
+    border:1px solid #bdc9d1;
+    padding:5px 6px;
+    line-height:1.25;
+    vertical-align:top;
+    overflow-wrap:anywhere
+  }
+  .report-print tr:nth-child(even) td{background:#f5f8fa!important}
+  .report-print tr{break-inside:avoid;page-break-inside:avoid}
+  .print-header{
+    display:flex!important;
+    align-items:center!important;
+    break-inside:avoid;
+    page-break-inside:avoid;
+    gap:10px!important;
+    padding-bottom:4px!important;
+    margin-bottom:7px!important
+  }
+  .print-header-text h1{font-size:13pt!important;line-height:1!important}
+  .print-header-text h2{font-size:9.5pt!important;margin-top:2px!important}
+  .print-logo{width:110px!important;max-height:46px!important}
+  .print-logo.logo-fdc{width:82px!important;max-height:34px!important}
+  .print-logos{gap:8px!important}
+  .print-meta{font-size:8pt!important;margin-bottom:7px!important}
+  .report-page,.partial-page{page-break-after:always;break-after:page}
+  .report-page:last-child,.partial-page:last-child{page-break-after:auto;break-after:auto}
+}
+</style>
+</head>
+<body>
+<div id="loadingOverlay" style="position:fixed;inset:0;background:#f7f9fb;display:flex;align-items:center;justify-content:center;z-index:999;">
+  <p class="muted">Carregando dados...</p>
+</div>
+<header class="topbar">
+  <div class="brand">
+    <div class="brandmark">GM</div>
+    <div><strong>Gestão de Mudanças</strong><br><small class="muted">Planos, grupos de trabalho e ações consolidadas</small></div>
+  </div>
+  <div class="row">
+    <span id="saveInfo" class="small muted">Conectando...</span>
+    <button class="btn sm mobile-menu" id="mobileMenuBtn" type="button">Menu</button>
+    <div class="header-logo" id="headerLogo">
+      <img src="assets/logo-esquerdo.png" alt="Pernambuco na Reforma">
+      <img class="logo-fdc" src="assets/logo-direita.png" alt="Fundação Dom Cabral">
+    </div>
+  </div>
+</header>
+
+<main id="homeView" class="home">
+  <div class="hero">
+    <div>
+      <h1>Planos de Gestão de Mudanças</h1>
+      <p class="muted">Crie e acompanhe vários planos. Cada plano pode ter vários grupos de trabalho, que desenvolvem as etapas da dinâmica e alimentam um plano de ação consolidado.</p>
+    </div>
+    <div class="row">
+      <button class="btn" id="exportTopBtn" type="button">Exportar JSON</button>
+      <label class="btn" style="display:inline-flex;align-items:center">
+        Importar JSON<input id="importInput" type="file" accept=".json,application/json" hidden>
+      </label>
+      <button class="btn primary" id="newPlanBtn" type="button">+ Novo plano</button>
+    </div>
+  </div>
+  <div id="homeSummary" class="metric-grid" style="margin-bottom:18px"></div>
+  <div id="planGrid" class="plan-grid"></div>
+</main>
+
+<section id="planView" class="hidden">
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="side-head">
+        <div class="small muted">PLANO ATUAL</div>
+        <strong id="sidePlanName">—</strong>
+        <div id="sidePlanMeta" class="small muted" style="margin-top:5px"></div>
+      </div>
+      <nav class="side-nav" id="sideNav">
+        <button data-stage="overview">Visão geral</button>
+        <button data-stage="translate">1. Traduzir</button>
+        <button data-stage="locate">2. Localizar</button>
+        <button data-stage="assign">3. Atribuir</button>
+        <button data-stage="validate">4. Validar</button>
+        <button data-stage="act">5. Agir</button>
+        <button data-stage="consolidated">Consolidado do plano</button>
+      </nav>
+      <div class="divider"></div>
+      <button class="btn" id="backHomeBtn" type="button" style="width:100%">← Todos os planos</button>
+    </aside>
+    <div class="content">
+      <div class="content-inner">
+        <div class="contextbar">
+          <div>
+            <div class="small muted" id="breadcrumb"></div>
+            <h1 id="pageTitle">—</h1>
+          </div>
+          <div class="row">
+            <button class="btn sm" id="editPlanBtn" type="button">Editar plano</button>
+            <button class="btn sm" id="partialPrintBtn" type="button">Imprimir parcial</button>
+            <button class="btn sm" id="printBtn" type="button">Imprimir / PDF</button>
+          </div>
+        </div>
+        <div id="groupBar" class="groupbar"></div>
+        <div id="stageTrack" class="stage-track"></div>
+        <div id="stageContent"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="printReport" class="report-print"></section>
+<div id="modalRoot"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script>
+(() => {
+  const firebaseConfig = {
+    apiKey: "AIzaSyB6fgYeTKq-N1Rfgy7mhVux340yAbXF5bs",
+    authDomain: "gestao-mudancas.firebaseapp.com",
+    projectId: "gestao-mudancas",
+    storageBucket: "gestao-mudancas.firebasestorage.app",
+    messagingSenderId: "189376539990",
+    appId: "1:189376539990:web:7724feeeecc0d48b98baf7"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  try{ db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(e){}
+  const STATE_DOC = db.collection('gestaoMudancas').doc('estado');
+  const EMPTY_STATE = {plans:[],activePlanId:null,activeGroupId:null,stage:'overview'};
+  const $ = (s, root=document) => root.querySelector(s);
+  const $$ = (s, root=document) => [...root.querySelectorAll(s)];
+  const uid = (p='id') => p+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const nowBR = () => new Date().toLocaleString('pt-BR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'});
+  const unique = arr => [...new Set(arr.filter(Boolean).map(x=>x.trim()).filter(Boolean))];
+  const splitNames = s => unique(String(s||'').split(/[,;\n]/));
+  const impactRef = i => String(i?.to || i?.item || '—');
+
+  let state = JSON.parse(JSON.stringify(EMPTY_STATE));
+  let saveTimer = null;
+
+  async function loadState(){
+    try{
+      const snap = await STATE_DOC.get();
+      return snap.exists ? snap.data() : null;
+    }catch(e){
+      console.error('Erro ao carregar dados do Firestore:', e);
+      toast('Não foi possível carregar os dados. Verifique sua conexão.');
+      return null;
+    }
+  }
+  function persist(msg=true){
+    STATE_DOC.set(state).then(()=>{
+      $('#saveInfo').textContent='Última alteração: '+nowBR();
+      if(msg) toast('Alterações salvas automaticamente');
+    }).catch(err=>{
+      console.error('Erro ao salvar no Firestore:', err);
+      toast('Erro ao salvar. Verifique sua conexão.');
+    });
+  }
+  function scheduleSave(){
+    clearTimeout(saveTimer); saveTimer=setTimeout(()=>persist(false),250);
+    $('#saveInfo').textContent='Salvando...';
+  }
+  function toast(text){
+    const t=$('#toast'); t.textContent=text; t.classList.add('show');
+    clearTimeout(t._tm); t._tm=setTimeout(()=>t.classList.remove('show'),1800);
+  }
+  function activePlan(){return state.plans.find(p=>p.id===state.activePlanId)}
+  function activeGroup(){
+    const p=activePlan(); return p?.groups.find(g=>g.id===state.activeGroupId) || p?.groups[0] || null;
+  }
+  function ensureGroupShape(g){
+    g.facts ||= []; g.impacts ||= []; g.responsibilities ||= []; g.validations ||= []; g.actions ||= [];
+    g.validationDone ||= false; g.name ||= 'Grupo de trabalho';
+    g.validations.forEach(v=>{
+      if(v.status==='Incorporada' || v.status==='Pendente de decisão') v.status='Ajustar';
+      if(v.status==='Não incorporada') v.status='Não ajustar';
+      delete v.type;
+      delete v.adjustment;
+    });
+    return g;
+  }
+  function ensurePlanShape(p){
+    p.groups ||= []; p.consolidatedActions ||= []; p.date ||= ''; p.facilitator ||= ''; p.description ||= '';
+    p.groups.forEach(ensureGroupShape); return p;
+  }
+  state.plans.forEach(ensurePlanShape);
+
+  function groupCompletion(g){
+    const factsDone=g.facts.length>0;
+    const locateDone=factsDone && g.facts.every(f=>g.impacts.some(i=>i.factId===f.id));
+    const assignDone=g.impacts.length>0 && g.impacts.every(i=>{
+      const r=g.responsibilities.find(x=>x.impactId===i.id);
+      return r && String(r.executes||'').trim() && String(r.decides||'').trim();
+    });
+    const validateDone=!!g.validationDone;
+    const actDone=g.actions.length>0 && g.actions.every(a=>String(a.who||'').trim() && String(a.status||'').trim());
+    return {translate:factsDone,locate:locateDone,assign:assignDone,validate:validateDone,act:actDone};
+  }
+  function groupPct(g){const c=groupCompletion(g); return Math.round(Object.values(c).filter(Boolean).length/5*100)}
+  function planPct(p){
+    if(!p.groups.length)return 0;
+    return Math.round(p.groups.reduce((s,g)=>s+groupPct(g),0)/p.groups.length);
+  }
+  function planMetrics(p){
+    let facts=0,impacts=0,resp=0,valid=0,actions=0,pending=0;
+    p.groups.forEach(g=>{
+      facts+=g.facts.length; impacts+=g.impacts.length;
+      resp+=g.responsibilities.filter(r=>r.executes&&r.decides).length;
+      valid+=g.validations.length; actions+=g.actions.length;
+      pending+=g.actions.filter(a=>['Precisa de ajuste','Pendente de decisão','Em elaboração'].includes(a.status)).length;
+    });
+    return {facts,impacts,resp,valid,actions,pending};
+  }
+
+  function render(){
+    const p=activePlan();
+    if(!p){state.activePlanId=null;state.activeGroupId=null;renderHome();return}
+    renderPlan();
+  }
+
+  function renderHome(){
+    $('#homeView').classList.remove('hidden'); $('#planView').classList.add('hidden');
+    $('#headerLogo').style.display='flex';
+    const totalGroups=state.plans.reduce((s,p)=>s+p.groups.length,0);
+    const totalActions=state.plans.reduce((s,p)=>s+planMetrics(p).actions,0);
+    const avg=state.plans.length?Math.round(state.plans.reduce((s,p)=>s+planPct(p),0)/state.plans.length):0;
+    $('#homeSummary').innerHTML=`
+      <div class="metric"><strong>${state.plans.length}</strong><span>planos cadastrados</span></div>
+      <div class="metric"><strong>${totalGroups}</strong><span>grupos de trabalho</span></div>
+      <div class="metric"><strong>${totalActions}</strong><span>ações dos grupos</span></div>
+      <div class="metric"><strong>${avg}%</strong><span>progresso médio</span></div>`;
+    const grid=$('#planGrid');
+    if(!state.plans.length){
+      grid.innerHTML='<div class="empty" style="grid-column:1/-1"><strong>Nenhum plano cadastrado.</strong><br>Crie o primeiro plano de Gestão de Mudanças para iniciar a dinâmica.</div>';
+      return;
+    }
+    grid.innerHTML=state.plans.map(p=>{
+      const m=planMetrics(p), pct=planPct(p);
+      return `<article class="card plan-card">
+        <div class="space"><h3>${esc(p.name)}</h3><span class="tag">${pct}%</span></div>
+        <div class="small muted">${esc(p.description||'Sem descrição')}</div>
+        <div class="plan-meta">
+          <span class="tag">${p.groups.length} grupo(s)</span><span class="tag">${m.impacts} impactos</span><span class="tag">${m.actions} ações</span>
+        </div>
+        <div class="progress"><span style="width:${pct}%"></span></div>
+        <div class="small muted" style="margin-top:7px">${p.date?esc(p.date):'Data não informada'}${p.facilitator?' • '+esc(p.facilitator):''}</div>
+        <div class="row" style="margin-top:14px">
+          <button class="btn primary sm" data-open-plan="${p.id}">Abrir plano</button>
+          <button class="btn sm" data-dup-plan="${p.id}">Duplicar</button>
+          <button class="btn danger sm" data-del-plan="${p.id}">Excluir</button>
+        </div>
+      </article>`;
+    }).join('');
+  }
+
+  function renderPlan(){
+    $('#headerLogo').style.display='flex';
+    const p=activePlan(); p.groups.forEach(ensureGroupShape);
+    if(!p.groups.length){state.activeGroupId=null}
+    if(state.activeGroupId && !p.groups.some(g=>g.id===state.activeGroupId)) state.activeGroupId=p.groups[0]?.id||null;
+    if(!state.activeGroupId && p.groups.length) state.activeGroupId=p.groups[0].id;
+
+    $('#homeView').classList.add('hidden'); $('#planView').classList.remove('hidden');
+    $('#sidePlanName').textContent=p.name;
+    $('#sidePlanMeta').textContent=[p.date,p.facilitator].filter(Boolean).join(' • ');
+    $('#breadcrumb').textContent='Plano de Gestão de Mudanças';
+    renderGroupBar();
+    renderStageTrack();
+    renderSideNav();
+    renderStage();
+    $('#sidebar').classList.remove('open');
+  }
+
+  function renderGroupBar(){
+    const p=activePlan(), g=activeGroup();
+    const area=$('#groupBar');
+    area.innerHTML=`<span class="small muted"><strong>Grupos de trabalho:</strong></span>`+
+      p.groups.map(x=>`<button class="group-chip ${g?.id===x.id?'active':''}" data-group="${x.id}" type="button">${esc(x.name)} <span class="small">${groupPct(x)}%</span></button>`).join('')+
+      `<button class="btn sm soft" id="addGroupBtn" type="button">+ Novo grupo</button>`+
+      (g?`<button class="btn sm" id="editGroupBtn" type="button">Editar grupo</button><button class="btn sm danger" id="deleteGroupBtn" type="button">Excluir grupo</button>`:'');
+  }
+
+  function renderStageTrack(){
+    const g=activeGroup();
+    const steps=[['translate','1 Traduzir'],['locate','2 Localizar'],['assign','3 Atribuir'],['validate','4 Validar'],['act','5 Agir']];
+    const comp=g?groupCompletion(g):{};
+    $('#stageTrack').innerHTML=steps.map(([k,label])=>`<div class="stage-pill ${state.stage===k?'active':''} ${comp[k]?'done':''}">${label}${comp[k]?' ✓':''}</div>`).join('');
+    $('#stageTrack').classList.toggle('hidden',state.stage==='consolidated'||state.stage==='overview'&&!g);
+  }
+
+  function renderSideNav(){
+    const g=activeGroup(), comp=g?groupCompletion(g):{};
+    $$('#sideNav button').forEach(b=>{
+      b.classList.toggle('active',b.dataset.stage===state.stage);
+      b.classList.toggle('done',!!comp[b.dataset.stage]);
+      const disabled=!g && !['overview','consolidated'].includes(b.dataset.stage);
+      b.disabled=disabled; b.style.opacity=disabled?'.45':'1';
+    });
+  }
+
+  function renderStage(){
+    const titles={overview:'Visão geral',translate:'1 — Traduzir',locate:'2 — Localizar',assign:'3 — Atribuir',validate:'4 — Validar',act:'5 — Agir',consolidated:'Plano de ação consolidado'};
+    $('#pageTitle').textContent=titles[state.stage]||'Gestão de Mudanças';
+    const c=$('#stageContent');
+    const p=activePlan(), g=activeGroup();
+    if(!g && !['overview','consolidated'].includes(state.stage)){
+      c.innerHTML='<div class="empty"><strong>Crie um grupo de trabalho para iniciar as atividades.</strong><br>Um plano pode ter vários grupos trabalhando em paralelo.</div>';
+      return;
+    }
+    if(state.stage==='overview') renderOverview(c,p,g);
+    if(state.stage==='translate') renderTranslate(c,g);
+    if(state.stage==='locate') renderLocate(c,g);
+    if(state.stage==='assign') renderAssign(c,g);
+    if(state.stage==='validate') renderValidate(c,g);
+    if(state.stage==='act') renderAct(c,g);
+    if(state.stage==='consolidated') renderConsolidated(c,p);
+  }
+
+  function footer(stage){
+    const order=['translate','locate','assign','validate','act'];
+    const i=order.indexOf(stage);
+    return `<div class="stage-footer">
+      <div>${i>0?`<button class="btn" data-goto="${order[i-1]}">← Etapa anterior</button>`:''}</div>
+      <div class="row"><button class="btn" data-save-now>Salvar</button>${i<order.length-1?`<button class="btn primary" data-goto="${order[i+1]}">Próxima etapa →</button>`:`<button class="btn primary" data-goto="consolidated">Ir ao consolidado →</button>`}</div>
+    </div>`;
+  }
+
+  function renderOverview(c,p,g){
+    const m=planMetrics(p), pct=planPct(p);
+    c.innerHTML=`
+      <div class="card" style="margin-bottom:16px">
+        <div class="space"><div><h2 style="margin:0;color:var(--blue)">${esc(p.name)}</h2><div class="muted">${esc(p.description||'')}</div></div><span class="tag">${pct}% concluído</span></div>
+        <div class="progress" style="margin-top:14px"><span style="width:${pct}%"></span></div>
+      </div>
+      <div class="metric-grid" style="margin-bottom:18px">
+        <div class="metric"><strong>${m.facts}</strong><span>fatos geradores</span></div>
+        <div class="metric"><strong>${m.impacts}</strong><span>impactos</span></div>
+        <div class="metric"><strong>${m.resp}</strong><span>responsabilidades definidas</span></div>
+        <div class="metric"><strong>${m.valid}</strong><span>contribuições</span></div>
+        <div class="metric"><strong>${m.actions}</strong><span>ações dos grupos</span></div>
+        <div class="metric"><strong>${m.pending}</strong><span>pendências</span></div>
+      </div>
+      ${!g?`<div class="empty"><strong>Este plano ainda não possui grupos de trabalho.</strong><br>Crie grupos para desenvolver a dinâmica em paralelo.<br><br><button class="btn primary" id="overviewAddGroup" type="button">+ Criar primeiro grupo</button></div>`:`
+      <div class="steps">
+        ${[
+          ['1','TRADUZIR','Que fato novo a exposição trouxe?','Lista de fatos geradores','translate'],
+          ['2','LOCALIZAR','Quais dimensões serão impactadas?','Mapa de impactos','locate'],
+          ['3','ATRIBUIR','Quem responderá por cada mudança?','Matriz de responsabilidades','assign'],
+          ['4','VALIDAR','O que os outros grupos apontaram?','Compartilhamento em plenário','validate'],
+          ['5','AGIR','O que, quem, até quando e como verificar?','Plano de ação','act']
+        ].map(x=>`<div class="step-card"><span class="step-no">${x[0]}</span><h3>${x[1]}</h3><p>${x[2]}</p><div class="small muted"><strong>Produto:</strong> ${x[3]}</div><button class="btn sm" data-goto="${x[4]}" style="margin-top:12px">Acessar etapa</button></div>`).join('')}
+      </div>
+      <div class="card" style="margin-top:18px">
+        <div class="space"><div><strong>Grupo ativo: ${esc(g.name)}</strong><div class="small muted">Cada impacto é o núcleo da cadeia: fato → mudança “de/para” → responsabilidades → validações → ações.</div></div><span class="tag">${groupPct(g)}%</span></div>
+      </div>`}
+    `;
+  }
+
+  function renderTranslate(c,g){
+    c.innerHTML=`
+      <div class="space"><div><h2 style="margin:0">Lista de fatos geradores de mudança</h2><p class="muted">Que fato novo a exposição trouxe?</p></div><button class="btn primary" id="addFactBtn" type="button">+ Adicionar fato</button></div>
+      <div class="stack" id="factsList">
+        ${g.facts.length?g.facts.map((f,i)=>`<div class="record"><div class="space"><div><span class="tag">Fato ${String(i+1).padStart(2,'0')}</span><h4 style="margin-top:8px">${esc(f.text)}</h4><div class="small muted">${esc(f.notes||'')}</div></div><div class="row"><button class="btn sm" data-edit-fact="${f.id}">Editar</button><button class="btn sm" data-dup-fact="${f.id}">Duplicar</button><button class="btn danger sm" data-del-fact="${f.id}">Excluir</button></div></div></div>`).join(''):`<div class="empty"><strong>Nenhum fato gerador cadastrado.</strong><br>Comece registrando os principais fatos apresentados.</div>`}
+      </div>${footer('translate')}`;
+  }
+
+  function renderLocate(c,g){
+    c.innerHTML=`
+      <div class="space"><div><h2 style="margin:0">Mapa de impactos</h2><p class="muted">Para cada fato, identifique o que muda na realidade e delimite claramente o “de → para”.</p></div><button class="btn primary" id="addImpactBtn" type="button" ${g.facts.length?'':'disabled'}>+ Adicionar impacto</button></div>
+      ${!g.facts.length?'<div class="empty">Cadastre ao menos um fato na etapa <strong>Traduzir</strong> antes de mapear impactos.</div>':
+      `<div class="stack">${g.facts.map((f,fi)=>{
+        const impacts=g.impacts.filter(i=>i.factId===f.id);
+        return `<div class="card"><div class="space"><div><span class="tag">Fato ${String(fi+1).padStart(2,'0')}</span><strong style="margin-left:8px">${esc(f.text)}</strong></div><span class="tag">${impacts.length} impacto(s)</span></div>
+          <div class="stack" style="margin-top:12px">${impacts.length?impacts.map(i=>impactCard(g,i)).join(''):'<div class="empty">Nenhum impacto associado a este fato.</div>'}</div>
+        </div>`}).join('')}</div>`}
+      ${footer('locate')}`;
+  }
+  function impactCard(g,i){
+    const code='I'+String(g.impacts.indexOf(i)+1).padStart(2,'0');
+    return `<div class="record">
+      <div class="space"><div><span class="tag">${code}</span> <span class="tag">${esc(i.dimension)}</span><strong style="margin-left:6px">${esc(impactRef(i))}</strong></div>
+      <div class="row"><button class="btn sm soft" data-chain="${i.id}">Ver cadeia completa</button><button class="btn sm" data-edit-impact="${i.id}">Editar</button><button class="btn danger sm" data-del-impact="${i.id}">Excluir</button></div></div>
+      <div class="impact-chain">
+        <div class="chain-cell"><b>DE</b>${esc(i.from||'—')}</div>
+        <div class="chain-cell"><b>PARA</b>${esc(i.to||'—')}</div>
+        <div class="chain-cell"><b>DIMENSÃO</b>${esc(i.dimension||'—')}</div>
+        <div class="chain-cell"><b>OBSERVAÇÕES</b>${esc(i.notes||'—')}</div>
+      </div>
+    </div>`;
+  }
+
+  function renderAssign(c,g){
+    if(!g.impacts.length){
+      c.innerHTML='<div class="empty">Nenhum impacto cadastrado. Finalize o <strong>Mapa de impactos</strong> primeiro.</div>'+footer('assign'); return;
+    }
+    c.innerHTML=`
+      <div><h2 style="margin:0">Matriz de responsabilidades</h2><p class="muted">Defina quem executará, apoiará, decidirá e precisará ser informado para cada mudança.</p></div>
+      <div class="tablewrap"><table><thead><tr><th>Referência da mudança (PARA)</th><th>EXECUTARÁ<br><span class="muted">quem fará</span></th><th>APOIARÁ<br><span class="muted">quem fornecerá insumo</span></th><th>DECIDIRÁ<br><span class="muted">quem aprovará</span></th><th>SERÁ INFORMADO<br><span class="muted">quem precisará saber</span></th><th></th></tr></thead><tbody>
+      ${g.impacts.map(i=>{
+        const r=g.responsibilities.find(x=>x.impactId===i.id)||{};
+        return `<tr>
+          <td><strong>${esc(impactRef(i))}</strong><div class="small muted">De: ${esc(i.from||'—')}</div></td>
+          <td>${esc(r.executes||'—')}</td><td>${esc(r.supports||'—')}</td><td>${esc(r.decides||'—')}</td><td>${esc(r.informed||'—')}</td>
+          <td><button class="btn sm" data-edit-resp="${i.id}">Definir</button></td>
+        </tr>`
+      }).join('')}
+      </tbody></table></div>${footer('assign')}`;
+  }
+
+  function renderValidate(c,g){
+    c.innerHTML=`
+      <div class="space"><div><h2 style="margin:0">Compartilhamento e validação</h2><p class="muted">Registre o que os outros grupos apontaram e indique se a contribuição exigirá ajuste.</p></div>
+        <label class="row small"><input id="validationDone" type="checkbox" style="width:auto;min-height:0" ${g.validationDone?'checked':''}> Marcar etapa como concluída</label>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="space"><strong>Pontos gerais da plenária</strong><button class="btn sm" id="addGeneralValidationBtn" type="button">+ Adicionar</button></div>
+        <div class="stack" style="margin-top:10px">${validationRows(g,null)}</div>
+      </div>
+      <div class="stack">${g.impacts.map(i=>`<div class="card"><div class="space"><div><strong>${esc(impactRef(i))}</strong><div class="small muted">Referência da mudança • De: ${esc(i.from||'—')}</div></div><button class="btn sm" data-add-validation="${i.id}">+ Contribuição</button></div><div class="stack" style="margin-top:10px">${validationRows(g,i.id)}</div></div>`).join('')||'<div class="empty">Ainda não há impactos para validar.</div>'}</div>
+      ${footer('validate')}`;
+  }
+  function validationRows(g,impactId){
+    const rows=g.validations.filter(v=>(v.impactId||null)===(impactId||null));
+    if(!rows.length)return '<div class="small muted">Nenhuma contribuição registrada.</div>';
+    return rows.map(v=>`<div class="record"><div class="space"><div><span class="tag ${v.status==='Ajustar'?'status-warn':'status-ok'}">${esc(v.status||'—')}</span><div style="margin-top:8px">${esc(v.comment)}</div><div class="small muted">${esc(v.origin||'Sem origem informada')}</div></div><div><button class="btn sm" data-edit-validation="${v.id}">Editar</button> <button class="btn danger sm" data-del-validation="${v.id}">Excluir</button></div></div></div>`).join('');
+  }
+
+  function renderAct(c,g){
+    c.innerHTML=`
+      <div class="space"><div><h2 style="margin:0">Plano de ação do grupo</h2><p class="muted">As ações poderão ser incorporadas ou consolidadas no plano final do Plano de Gestão de Mudanças.</p></div><button class="btn primary" id="addActionBtn" type="button">+ Adicionar ação</button></div>
+      ${g.actions.length?`<div class="tablewrap"><table><thead><tr><th>Nº</th><th>O quê</th><th>Quem</th><th>Até quando</th><th>Sinal de verificação</th><th>Status</th><th>Impacto relacionado</th><th></th></tr></thead><tbody>
+        ${g.actions.map((a,i)=>`<tr><td>${i+1}</td><td><strong>${esc(a.what)}</strong></td><td>${esc(a.who||'—')}</td><td>${esc(a.due||'—')}</td><td>${esc(a.verify||'—')}</td><td><span class="tag ${a.status==='Madura para compromisso'?'status-ok':['Precisa de ajuste','Pendente de decisão','Em elaboração'].includes(a.status)?'status-warn':''}">${esc(a.status||'—')}</span></td><td>${esc(impactRef(g.impacts.find(x=>x.id===a.impactId)) === '—' ? 'Ação geral' : impactRef(g.impacts.find(x=>x.id===a.impactId)))}</td><td><button class="btn sm" data-edit-action="${a.id}">Editar</button> <button class="btn danger sm" data-del-action="${a.id}">Excluir</button></td></tr>`).join('')}
+      </tbody></table></div>`:'<div class="empty">Nenhuma ação cadastrada para este grupo.</div>'}
+      ${footer('act')}`;
+  }
+
+  function allGroupActions(p){
+    return p.groups.flatMap(g=>g.actions.filter(a=>a.status!=='Não se aplica').map(a=>({...a,groupId:g.id,groupName:g.name})));
+  }
+
+  function renderConsolidated(c,p){
+    const candidates=allGroupActions(p);
+    c.innerHTML=`
+      <div class="space"><div><h2 style="margin:0">Plano de ação consolidado</h2><p class="muted">Reúna as ações produzidas pelos grupos, elimine duplicidades e finalize um único plano do projeto de mudança.</p></div><button class="btn primary" id="addManualConsolidatedBtn" type="button">+ Nova ação consolidada</button></div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="space"><div><strong>Ações produzidas pelos grupos</strong><div class="small muted">Selecione ações para adicioná-las individualmente ou fundi-las em uma única ação consolidada.</div></div>
+          <div class="row"><button class="btn sm" id="addSelectedBtn" type="button">Adicionar selecionadas</button><button class="btn sm soft" id="mergeSelectedBtn" type="button">Consolidar selecionadas em 1 ação</button></div></div>
+        ${candidates.length?`<div class="tablewrap" style="margin-top:12px"><table><thead><tr><th style="width:42px"></th><th>Grupo</th><th>Ação</th><th>Responsável</th><th>Prazo</th><th>Status</th></tr></thead><tbody>
+          ${candidates.map(a=>`<tr><td><input class="candidate-check" data-source-action="${a.id}" type="checkbox" style="width:auto;min-height:0"></td><td>${esc(a.groupName)}</td><td>${esc(a.what)}</td><td>${esc(a.who||'—')}</td><td>${esc(a.due||'—')}</td><td>${esc(a.status||'—')}</td></tr>`).join('')}
+        </tbody></table></div>`:'<div class="empty" style="margin-top:12px">Os grupos ainda não registraram ações elegíveis para consolidação.</div>'}
+      </div>
+      <div class="space" style="margin-bottom:10px"><h3 style="margin:0;color:var(--blue)">Plano final consolidado</h3><span class="tag">${p.consolidatedActions.length} ação(ões)</span></div>
+      ${p.consolidatedActions.length?`<div class="tablewrap"><table><thead><tr><th>Nº</th><th>Ação</th><th>Responsável</th><th>Prazo</th><th>Sinal de verificação</th><th>Status</th><th>Origem</th><th></th></tr></thead><tbody>
+        ${p.consolidatedActions.map((a,i)=>`<tr><td>${i+1}</td><td><strong>${esc(a.what)}</strong></td><td>${esc(a.who||'—')}</td><td>${esc(a.due||'—')}</td><td>${esc(a.verify||'—')}</td><td>${esc(a.status||'—')}</td><td>${a.sourceActionIds?.length?`${a.sourceActionIds.length} ação(ões) de grupo`:'Manual'}</td><td><button class="btn sm" data-edit-consolidated="${a.id}">Editar</button> <button class="btn danger sm" data-del-consolidated="${a.id}">Excluir</button></td></tr>`).join('')}
+      </tbody></table></div>`:'<div class="empty">O plano consolidado ainda está vazio. Selecione ações dos grupos ou crie uma ação diretamente.</div>'}
+      <div class="card" style="margin-top:16px"><strong>Encadeamento da mudança</strong><div class="small muted" style="margin-top:5px">No consolidado, cada ação oriunda dos grupos mantém referência ao trabalho que a originou. Use “Ver cadeia completa” nos impactos para acompanhar fato → impacto → responsabilidades → validações → ações.</div></div>`;
+  }
+
+  function openModal(title, body, onSave, saveLabel='Salvar'){
+    const root=$('#modalRoot');
+    root.innerHTML=`<div class="modal-back"><div class="modal" role="dialog" aria-modal="true"><div class="space"><h2>${esc(title)}</h2><button class="iconbtn" id="modalClose" type="button">✕</button></div><form id="modalForm"><div class="stack">${body}</div><div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn" id="modalCancel" type="button">Cancelar</button><button class="btn primary" type="submit">${esc(saveLabel)}</button></div></form></div></div>`;
+    $('#modalClose').onclick=$('#modalCancel').onclick=()=>root.innerHTML='';
+    $('#modalForm').addEventListener('submit',e=>{e.preventDefault(); if(onSave(new FormData(e.currentTarget))!==false){root.innerHTML='';persist(false);render()}});
+  }
+  const input=(name,label,val='',req=false,type='text')=>`<div class="field"><label>${label}${req?' *':''}</label><input name="${name}" type="${type}" value="${esc(val)}" ${req?'required':''}></div>`;
+  const ta=(name,label,val='',req=false)=>`<div class="field"><label>${label}${req?' *':''}</label><textarea name="${name}" ${req?'required':''}>${esc(val)}</textarea></div>`;
+  function sel(name,label,options,val=''){
+    return `<div class="field"><label>${label}</label><select name="${name}">${options.map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
+  }
+
+  function planModal(existing){
+    openModal(existing?'Editar plano':'Novo plano',`
+      ${input('name','Nome do plano',existing?.name||'',true)}
+      ${ta('description','Descrição / objetivo',existing?.description||'')}
+      <div class="grid2">${input('date','Data',existing?.date||'',false,'date')}${input('facilitator','Facilitador',existing?.facilitator||'')}</div>
+    `,fd=>{
+      if(existing){existing.name=fd.get('name').trim();existing.description=fd.get('description').trim();existing.date=fd.get('date');existing.facilitator=fd.get('facilitator').trim()}
+      else{
+        const p={id:uid('plan'),name:fd.get('name').trim(),description:fd.get('description').trim(),date:fd.get('date'),facilitator:fd.get('facilitator').trim(),groups:[],consolidatedActions:[]};
+        state.plans.push(p); state.activePlanId=p.id; state.activeGroupId=null; state.stage='overview';
+      }
+    });
+  }
+  function groupModal(existing){
+    const p=activePlan();
+    openModal(existing?'Editar grupo':'Novo grupo de trabalho',`${input('name','Nome do grupo',existing?.name||'',true)}${ta('description','Escopo / observações',existing?.description||'')}`,fd=>{
+      if(existing){existing.name=fd.get('name').trim();existing.description=fd.get('description').trim()}
+      else{const g=ensureGroupShape({id:uid('group'),name:fd.get('name').trim(),description:fd.get('description').trim()});p.groups.push(g);state.activeGroupId=g.id}
+    });
+  }
+  function factModal(existing){
+    const g=activeGroup();
+    openModal(existing?'Editar fato gerador':'Adicionar fato gerador',`${ta('text','Fato gerador de mudança',existing?.text||'',true)}${ta('notes','Observações',existing?.notes||'')}`,fd=>{
+      if(existing){existing.text=fd.get('text').trim();existing.notes=fd.get('notes').trim()}
+      else g.facts.push({id:uid('fact'),text:fd.get('text').trim(),notes:fd.get('notes').trim()});
+    });
+  }
+  function impactModal(existing){
+    const g=activeGroup();
+    const dims=['Processo','Sistema','Competência','Norma','Dado','Estrutura organizacional','Pessoas','Outro'];
+    openModal(existing?'Editar impacto':'Adicionar impacto',`
+      <div class="field"><label>Fato gerador *</label><select name="factId" required>${g.facts.map(f=>`<option value="${f.id}" ${f.id===existing?.factId?'selected':''}>${esc(f.text)}</option>`).join('')}</select></div>
+      ${sel('dimension','Dimensão impactada',dims,existing?.dimension||dims[0])}
+      <div class="grid2">${ta('from','De:',existing?.from||'',true)}${ta('to','Para: — esta será a referência da mudança nas próximas etapas',existing?.to||'',true)}</div>
+      ${ta('notes','Observações',existing?.notes||'')}
+    `,fd=>{
+      const data={factId:fd.get('factId'),dimension:fd.get('dimension'),from:fd.get('from').trim(),to:fd.get('to').trim(),notes:fd.get('notes').trim()};
+      if(existing)Object.assign(existing,data);else g.impacts.push({id:uid('impact'),...data});
+    });
+  }
+  function respModal(impactId){
+    const g=activeGroup(), i=g.impacts.find(x=>x.id===impactId);
+    let r=g.responsibilities.find(x=>x.impactId===impactId);
+    openModal('Responsabilidades — '+impactRef(i),`
+      <div class="record"><div class="small muted">REFERÊNCIA DA MUDANÇA (PARA)</div><strong>${esc(impactRef(i))}</strong></div>
+      ${input('executes','EXECUTARÁ — quem fará',r?.executes||'',true)}
+      ${input('supports','APOIARÁ — quem fornecerá insumo',r?.supports||'')}
+      ${input('decides','DECIDIRÁ — quem aprovará',r?.decides||'',true)}
+      ${input('informed','SERÁ INFORMADO — quem precisará saber',r?.informed||'')}
+      ${ta('notes','Comentários',r?.notes||'')}
+    `,fd=>{
+      const data={impactId,executes:fd.get('executes').trim(),supports:fd.get('supports').trim(),decides:fd.get('decides').trim(),informed:fd.get('informed').trim(),notes:fd.get('notes').trim()};
+      if(r)Object.assign(r,data);else g.responsibilities.push({id:uid('resp'),...data});
+    });
+  }
+  function validationModal(impactId,existing){
+    const g=activeGroup();
+    const i=impactId ? g.impacts.find(x=>x.id===impactId) : null;
+    const reference=i ? impactRef(i) : 'Pontos gerais da plenária';
+    const statuses=['Ajustar','Não ajustar'];
+    openModal(existing?'Editar contribuição':'Adicionar contribuição',`
+      <div class="record"><div class="small muted">ITEM A QUE A CONTRIBUIÇÃO SE REFERE</div><strong>${esc(reference)}</strong></div>
+      ${ta('comment','Comentário / contribuição',existing?.comment||'',true)}
+      ${input('origin','Grupo ou origem',existing?.origin||'')}
+      ${sel('status','Situação',statuses,existing?.status||statuses[0])}
+    `,fd=>{
+      const data={impactId:impactId||null,comment:fd.get('comment').trim(),origin:fd.get('origin').trim(),status:fd.get('status')};
+      if(existing){
+        Object.assign(existing,data);
+        delete existing.type;
+        delete existing.adjustment;
+      }else g.validations.push({id:uid('val'),...data});
+    });
+  }
+  function actionModal(existing){
+    const g=activeGroup();
+    const statuses=['Em elaboração','Madura para compromisso','Precisa de ajuste','Pendente de decisão','Não se aplica'];
+    openModal(existing?'Editar ação':'Adicionar ação',`
+      <div class="field"><label>Impacto relacionado</label><select name="impactId"><option value="">Ação geral</option>${g.impacts.map(i=>`<option value="${i.id}" ${i.id===existing?.impactId?'selected':''}>${esc(impactRef(i))}</option>`).join('')}</select></div>
+      ${ta('what','O QUÊ — ação a executar',existing?.what||'',true)}
+      <div class="grid2">${input('who','QUEM — responsável nominal',existing?.who||'',true)}${input('due','ATÉ QUANDO',existing?.due||'')}</div>
+      ${ta('verify','SINAL DE VERIFICAÇÃO — como saberemos que ocorreu',existing?.verify||'')}
+      ${sel('status','Status',statuses,existing?.status||statuses[0])}
+      <div class="grid2">${ta('adjustment','Ajuste necessário',existing?.adjustment||'')}${input('adjustOwner','Responsável pelo ajuste',existing?.adjustOwner||'')}</div>
+      <div class="grid2">${ta('pendingDecision','Decisão pendente',existing?.pendingDecision||'')}${input('decisionOwner','Quem deve decidir',existing?.decisionOwner||'')}</div>
+      ${ta('justification','Justificativa / observações',existing?.justification||'')}
+    `,fd=>{
+      const data={impactId:fd.get('impactId')||null,what:fd.get('what').trim(),who:fd.get('who').trim(),due:fd.get('due').trim(),verify:fd.get('verify').trim(),status:fd.get('status'),adjustment:fd.get('adjustment').trim(),adjustOwner:fd.get('adjustOwner').trim(),pendingDecision:fd.get('pendingDecision').trim(),decisionOwner:fd.get('decisionOwner').trim(),justification:fd.get('justification').trim()};
+      if(existing)Object.assign(existing,data);else g.actions.push({id:uid('action'),...data});
+    });
+  }
+  function consolidatedModal(existing,defaults={}){
+    const p=activePlan();
+    const statuses=['Em elaboração','Madura para compromisso','Precisa de ajuste','Pendente de decisão','Concluída'];
+    const d={...defaults,...(existing||{})};
+    openModal(existing?'Editar ação consolidada':'Nova ação consolidada',`
+      ${ta('what','Ação consolidada',d.what||'',true)}
+      <div class="grid2">${input('who','Responsável',d.who||'',true)}${input('due','Prazo',d.due||'')}</div>
+      ${ta('verify','Sinal de verificação',d.verify||'')}
+      ${sel('status','Status',statuses,d.status||statuses[0])}
+      ${ta('notes','Observações',d.notes||'')}
+    `,fd=>{
+      const data={what:fd.get('what').trim(),who:fd.get('who').trim(),due:fd.get('due').trim(),verify:fd.get('verify').trim(),status:fd.get('status'),notes:fd.get('notes').trim(),sourceActionIds:d.sourceActionIds||[]};
+      if(existing)Object.assign(existing,data);else p.consolidatedActions.push({id:uid('cons'),...data});
+    });
+  }
+
+  function showChain(impactId){
+    const g=activeGroup(), i=g.impacts.find(x=>x.id===impactId), f=g.facts.find(x=>x.id===i.factId);
+    const r=g.responsibilities.find(x=>x.impactId===impactId)||{};
+    const vals=g.validations.filter(v=>v.impactId===impactId), acts=g.actions.filter(a=>a.impactId===impactId);
+    openModal('Cadeia completa do impacto',`
+      <div class="record"><div class="small muted">FATO GERADOR</div><strong>${esc(f?.text||'—')}</strong></div>
+      <div class="impact-chain"><div class="chain-cell"><b>REFERÊNCIA DA MUDANÇA (PARA)</b>${esc(impactRef(i))}</div><div class="chain-cell"><b>DIMENSÃO</b>${esc(i.dimension)}</div><div class="chain-cell"><b>DE</b>${esc(i.from)}</div><div class="chain-cell"><b>PARA</b>${esc(i.to)}</div></div>
+      <div class="record"><strong>Responsabilidades</strong><div class="small" style="margin-top:7px"><b>Executa:</b> ${esc(r.executes||'—')} &nbsp; <b>Apoia:</b> ${esc(r.supports||'—')} &nbsp; <b>Decide:</b> ${esc(r.decides||'—')} &nbsp; <b>Informado:</b> ${esc(r.informed||'—')}</div></div>
+      <div class="record"><strong>Validações (${vals.length})</strong>${vals.map(v=>`<div class="small" style="margin-top:6px">• ${esc(v.type)} — ${esc(v.comment)} <span class="muted">(${esc(v.status)})</span></div>`).join('')||'<div class="small muted">Nenhuma contribuição.</div>'}</div>
+      <div class="record"><strong>Ações relacionadas (${acts.length})</strong>${acts.map(a=>`<div class="small" style="margin-top:6px">• ${esc(a.what)} — ${esc(a.who||'sem responsável')} <span class="muted">(${esc(a.status)})</span></div>`).join('')||'<div class="small muted">Nenhuma ação.</div>'}</div>
+    `,()=>true,'Fechar');
+    const form=$('#modalForm'); const save=form.querySelector('button[type=submit]'); save.type='button'; save.onclick=()=>$('#modalRoot').innerHTML='';
+  }
+
+  function printHeader(p, groupName=''){
+    return `<div class="print-header">
+      <div class="print-header-text">
+        <h1>GESTÃO DE MUDANÇAS</h1>
+        <h2>${esc(p.name)}${groupName?' — '+esc(groupName):''}</h2>
+      </div>
+      <div class="print-logos">
+        <img class="print-logo" src="assets/logo-esquerdo.png" alt="Pernambuco na Reforma">
+        <img class="print-logo logo-fdc" src="assets/logo-direita.png" alt="Fundação Dom Cabral">
+      </div>
+    </div>`;
+  }
+
+  function buildPrintReport(){
+    const p=activePlan(); if(!p)return;
+    const rows=(arr,cb)=>arr.map(cb).join('')||'<tr><td colspan="9">Nenhum registro.</td></tr>';
+    const meta = `<p class="print-meta">${esc(p.description||'')}${p.date?'<br><strong>Data:</strong> '+esc(p.date):''}${p.facilitator?' &nbsp; • &nbsp; <strong>Facilitador:</strong> '+esc(p.facilitator):''}</p>`;
+
+    const groupPages = p.groups.map(g=>`
+      <section class="report-page">
+        ${printHeader(p,g.name)}
+        ${meta}
+        <h3>1. Fatos geradores</h3>
+        <table>
+          <tr><th style="width:6%">Nº</th><th style="width:58%">Fato gerador</th><th>Observações</th></tr>
+          ${rows(g.facts,(f,i)=>`<tr><td>${i+1}</td><td>${esc(f.text)}</td><td>${esc(f.notes||'')}</td></tr>`)}
+        </table>
+
+        <h3>2. Mapa de impactos</h3>
+        <table>
+          <tr><th style="width:29%">Fato gerador</th><th style="width:13%">Dimensão</th><th style="width:29%">De</th><th style="width:29%">Para</th></tr>
+          ${rows(g.impacts,i=>`<tr><td>${esc(g.facts.find(f=>f.id===i.factId)?.text||'')}</td><td>${esc(i.dimension)}</td><td>${esc(i.from)}</td><td><strong>${esc(impactRef(i))}</strong></td></tr>`)}
+        </table>
+
+        <h3>3. Matriz de responsabilidades</h3>
+        <table>
+          <tr><th style="width:28%">Referência da mudança (PARA)</th><th>Executará</th><th>Apoiará</th><th>Decidirá</th><th>Será informado</th></tr>
+          ${rows(g.impacts,i=>{const r=g.responsibilities.find(x=>x.impactId===i.id)||{};return `<tr><td><strong>${esc(impactRef(i))}</strong></td><td>${esc(r.executes||'')}</td><td>${esc(r.supports||'')}</td><td>${esc(r.decides||'')}</td><td>${esc(r.informed||'')}</td></tr>`})}
+        </table>
+
+        <h3>4. Validação</h3>
+        <table>
+          <tr><th style="width:28%">Referência da mudança (PARA)</th><th style="width:38%">Contribuição</th><th style="width:18%">Origem</th><th style="width:16%">Situação</th></tr>
+          ${rows(g.validations,v=>`<tr><td>${esc(v.impactId?impactRef(g.impacts.find(i=>i.id===v.impactId)):'Geral')}</td><td>${esc(v.comment)}</td><td>${esc(v.origin||'')}</td><td>${esc(v.status)}</td></tr>`)}
+        </table>
+
+        <h3>5. Plano de ação do grupo</h3>
+        <table>
+          <tr><th style="width:31%">Ação</th><th style="width:18%">Responsável</th><th style="width:12%">Prazo</th><th style="width:25%">Sinal de verificação</th><th style="width:14%">Status</th></tr>
+          ${rows(g.actions,a=>`<tr><td><strong>${esc(a.what)}</strong></td><td>${esc(a.who)}</td><td>${esc(a.due)}</td><td>${esc(a.verify)}</td><td>${esc(a.status)}</td></tr>`)}
+        </table>
+      </section>
+    `).join('');
+
+    const consolidatedPage = p.consolidatedActions.length ? `
+      <section class="report-page">
+        ${printHeader(p,'Plano de ação consolidado')}
+        ${meta}
+        <h3>Plano de ação consolidado</h3>
+        <table>
+          <tr><th style="width:5%">Nº</th><th style="width:32%">Ação</th><th style="width:18%">Responsável</th><th style="width:12%">Prazo</th><th style="width:21%">Sinal de verificação</th><th style="width:12%">Status</th></tr>
+          ${rows(p.consolidatedActions,(a,i)=>`<tr><td>${i+1}</td><td><strong>${esc(a.what)}</strong></td><td>${esc(a.who)}</td><td>${esc(a.due)}</td><td>${esc(a.verify)}</td><td>${esc(a.status)}</td></tr>`)}
+        </table>
+      </section>` : '';
+
+    $('#printReport').innerHTML=groupPages+consolidatedPage;
+  }
+
+  function buildPartialPrintReport(){
+    const p=activePlan(), g=activeGroup(); if(!p||!g)return false;
+    const rows=(arr,cb)=>arr.map(cb).join('')||'<tr><td colspan="9">Nenhum registro.</td></tr>';
+    const meta = `<p class="print-meta">${esc(p.description||'')}${p.date?'<br><strong>Data:</strong> '+esc(p.date):''}${p.facilitator?' &nbsp; • &nbsp; <strong>Facilitador:</strong> '+esc(p.facilitator):''}</p>`;
+
+    $('#printReport').innerHTML=`
+      <section class="partial-page">
+        ${printHeader(p,g.name)}
+        ${meta}
+        <h3>1 — TRADUZIR</h3>
+        <p><strong>Que fato novo a exposição trouxe?</strong></p>
+        <table>
+          <tr><th style="width:7%">Nº</th><th style="width:58%">Fato gerador</th><th>Observações</th></tr>
+          ${rows(g.facts,(f,i)=>`<tr><td>${i+1}</td><td>${esc(f.text)}</td><td>${esc(f.notes||'')}</td></tr>`)}
+        </table>
+      </section>
+
+      <section class="partial-page">
+        ${printHeader(p,g.name)}
+        ${meta}
+        <h3>2 — LOCALIZAR</h3>
+        <p><strong>Quais dimensões serão impactadas e qual será a mudança de “De” para “Para”?</strong></p>
+        <table>
+          <tr><th style="width:30%">Fato gerador</th><th style="width:14%">Dimensão</th><th style="width:28%">De</th><th style="width:28%">Para</th></tr>
+          ${rows(g.impacts,i=>`<tr><td>${esc(g.facts.find(f=>f.id===i.factId)?.text||'')}</td><td>${esc(i.dimension)}</td><td>${esc(i.from)}</td><td><strong>${esc(impactRef(i))}</strong></td></tr>`)}
+        </table>
+      </section>
+
+      <section class="partial-page">
+        ${printHeader(p,g.name)}
+        ${meta}
+        <h3>3 — ATRIBUIR</h3>
+        <p><strong>Quem executará, apoiará, decidirá e precisará ser informado para cada mudança?</strong></p>
+        <table>
+          <tr><th style="width:28%">Referência da mudança (PARA)</th><th>Executará</th><th>Apoiará</th><th>Decidirá</th><th>Será informado</th></tr>
+          ${rows(g.impacts,i=>{const r=g.responsibilities.find(x=>x.impactId===i.id)||{};return `<tr><td><strong>${esc(impactRef(i))}</strong></td><td>${esc(r.executes||'')}</td><td>${esc(r.supports||'')}</td><td>${esc(r.decides||'')}</td><td>${esc(r.informed||'')}</td></tr>`})}
+        </table>
+      </section>`;
+    return true;
+  }
+
+  document.addEventListener('click',e=>{
+    const t=e.target.closest('button'); if(!t)return;
+    if(t.id==='newPlanBtn') return planModal();
+    if(t.dataset.openPlan){state.activePlanId=t.dataset.openPlan;state.activeGroupId=activePlan()?.groups[0]?.id||null;state.stage='overview';persist(false);return render()}
+    if(t.dataset.dupPlan){
+      const p=state.plans.find(x=>x.id===t.dataset.dupPlan), copy=JSON.parse(JSON.stringify(p));
+      copy.id=uid('plan'); copy.name=p.name+' — cópia';
+      copy.groups.forEach(g=>{g.id=uid('group');});
+      copy.consolidatedActions.forEach(a=>a.id=uid('cons'));
+      state.plans.push(copy);persist(false);return renderHome();
+    }
+    if(t.dataset.delPlan){
+      const p=state.plans.find(x=>x.id===t.dataset.delPlan);
+      if(confirm(`Excluir o plano "${p.name}" e todos os seus grupos?`)){state.plans=state.plans.filter(x=>x.id!==p.id);persist(false);renderHome()} return;
+    }
+    if(t.id==='backHomeBtn'){state.activePlanId=null;state.activeGroupId=null;state.stage='overview';persist(false);return renderHome()}
+    if(t.id==='mobileMenuBtn'){return $('#sidebar').classList.toggle('open')}
+    if(t.dataset.stage){state.stage=t.dataset.stage;return renderPlan()}
+    if(t.dataset.goto){state.stage=t.dataset.goto;return renderPlan()}
+    if(t.dataset.group){state.activeGroupId=t.dataset.group;state.stage=state.stage==='consolidated'?'overview':state.stage;persist(false);return renderPlan()}
+    if(t.id==='addGroupBtn'||t.id==='overviewAddGroup')return groupModal();
+    if(t.id==='editGroupBtn')return groupModal(activeGroup());
+    if(t.id==='deleteGroupBtn'){const g=activeGroup();if(g&&confirm(`Excluir o grupo "${g.name}" e todo o conteúdo produzido por ele?`)){const p=activePlan();p.groups=p.groups.filter(x=>x.id!==g.id);state.activeGroupId=p.groups[0]?.id||null;persist(false);renderPlan()}return}
+    if(t.id==='editPlanBtn')return planModal(activePlan());
+    if(t.id==='addFactBtn')return factModal();
+    if(t.dataset.editFact)return factModal(activeGroup().facts.find(x=>x.id===t.dataset.editFact));
+    if(t.dataset.dupFact){const g=activeGroup(),f=g.facts.find(x=>x.id===t.dataset.dupFact);g.facts.push({id:uid('fact'),text:f.text+' — cópia',notes:f.notes});persist(false);return renderPlan()}
+    if(t.dataset.delFact){
+      const g=activeGroup(),id=t.dataset.delFact;
+      if(confirm('Excluir este fato? Impactos associados e seus vínculos também serão removidos.')){
+        const impactIds=g.impacts.filter(i=>i.factId===id).map(i=>i.id);
+        g.facts=g.facts.filter(f=>f.id!==id);g.impacts=g.impacts.filter(i=>i.factId!==id);
+        g.responsibilities=g.responsibilities.filter(r=>!impactIds.includes(r.impactId));
+        g.validations=g.validations.filter(v=>!impactIds.includes(v.impactId));
+        g.actions.forEach(a=>{if(impactIds.includes(a.impactId))a.impactId=null});
+        persist(false);renderPlan();
+      } return;
+    }
+    if(t.id==='addImpactBtn')return impactModal();
+    if(t.dataset.editImpact)return impactModal(activeGroup().impacts.find(x=>x.id===t.dataset.editImpact));
+    if(t.dataset.delImpact){
+      const g=activeGroup(),id=t.dataset.delImpact;
+      if(confirm('Excluir este impacto e suas responsabilidades/validações? As ações relacionadas serão mantidas como ações gerais.')){
+        g.impacts=g.impacts.filter(i=>i.id!==id);g.responsibilities=g.responsibilities.filter(r=>r.impactId!==id);g.validations=g.validations.filter(v=>v.impactId!==id);g.actions.forEach(a=>{if(a.impactId===id)a.impactId=null});persist(false);renderPlan()
+      }return;
+    }
+    if(t.dataset.chain)return showChain(t.dataset.chain);
+    if(t.dataset.editResp)return respModal(t.dataset.editResp);
+    if(t.id==='addGeneralValidationBtn')return validationModal(null);
+    if(t.dataset.addValidation)return validationModal(t.dataset.addValidation);
+    if(t.dataset.editValidation){const g=activeGroup(),v=g.validations.find(x=>x.id===t.dataset.editValidation);return validationModal(v.impactId,v)}
+    if(t.dataset.delValidation){const g=activeGroup();if(confirm('Excluir esta contribuição?')){g.validations=g.validations.filter(v=>v.id!==t.dataset.delValidation);persist(false);renderPlan()}return}
+    if(t.id==='addActionBtn')return actionModal();
+    if(t.dataset.editAction)return actionModal(activeGroup().actions.find(x=>x.id===t.dataset.editAction));
+    if(t.dataset.delAction){const g=activeGroup();if(confirm('Excluir esta ação?')){g.actions=g.actions.filter(a=>a.id!==t.dataset.delAction);persist(false);renderPlan()}return}
+    if(t.id==='addManualConsolidatedBtn')return consolidatedModal();
+    if(t.dataset.editConsolidated)return consolidatedModal(activePlan().consolidatedActions.find(x=>x.id===t.dataset.editConsolidated));
+    if(t.dataset.delConsolidated){const p=activePlan();if(confirm('Excluir esta ação do plano consolidado?')){p.consolidatedActions=p.consolidatedActions.filter(a=>a.id!==t.dataset.delConsolidated);persist(false);renderPlan()}return}
+    if(t.id==='addSelectedBtn'){
+      const p=activePlan(), ids=$$('.candidate-check:checked').map(x=>x.dataset.sourceAction), all=allGroupActions(p);
+      if(!ids.length)return toast('Selecione ao menos uma ação');
+      ids.forEach(id=>{
+        if(p.consolidatedActions.some(c=>c.sourceActionIds?.includes(id)))return;
+        const a=all.find(x=>x.id===id); if(a)p.consolidatedActions.push({id:uid('cons'),sourceActionIds:[id],what:a.what,who:a.who,due:a.due,verify:a.verify,status:a.status,notes:'Origem: '+a.groupName});
+      });persist(false);return renderPlan();
+    }
+    if(t.id==='mergeSelectedBtn'){
+      const p=activePlan(), ids=$$('.candidate-check:checked').map(x=>x.dataset.sourceAction), all=allGroupActions(p).filter(a=>ids.includes(a.id));
+      if(all.length<2)return toast('Selecione pelo menos duas ações para consolidar');
+      const defaults={sourceActionIds:ids,what:unique(all.map(a=>a.what)).join(' / '),who:unique(all.flatMap(a=>splitNames(a.who))).join(', '),due:unique(all.map(a=>a.due)).join(' / '),verify:unique(all.map(a=>a.verify)).join(' / '),status:'Em elaboração',notes:'Consolidada a partir de: '+unique(all.map(a=>a.groupName)).join(', ')};
+      return consolidatedModal(null,defaults);
+    }
+    if(t.hasAttribute('data-save-now')){persist(false);return toast('Dados salvos com sucesso')}
+    if(t.id==='partialPrintBtn'){
+      if(!activeGroup()) return toast('Selecione um grupo de trabalho');
+      buildPartialPrintReport(); return window.print();
+    }
+    if(t.id==='printBtn'){buildPrintReport();return window.print()}
+  });
+
+  document.addEventListener('change',e=>{
+    if(e.target.id==='validationDone'){activeGroup().validationDone=e.target.checked;persist(false);renderPlan()}
+  });
+
+  $('#exportTopBtn').addEventListener('click',()=>{
+    const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gestao-de-mudancas-backup.json';a.click();URL.revokeObjectURL(a.href);toast('Backup JSON exportado');
+  });
+  $('#importInput').addEventListener('change',e=>{
+    const file=e.target.files?.[0]; if(!file)return;
+    const r=new FileReader();
+    r.onload=()=>{try{const data=JSON.parse(r.result);if(!data||!Array.isArray(data.plans))throw new Error();if(!confirm('Importar este arquivo substituirá os dados atuais. Deseja continuar?'))return;state=data;state.plans.forEach(ensurePlanShape);persist(false);render();toast('Dados importados com sucesso')}catch(err){alert('Arquivo JSON inválido.')}finally{e.target.value=''}};
+    r.readAsText(file);
+  });
+
+  (async function init(){
+    const loaded = await loadState();
+    state = loaded || JSON.parse(JSON.stringify(EMPTY_STATE));
+    state.plans.forEach(ensurePlanShape);
+    const overlay = document.getElementById('loadingOverlay');
+    if(overlay) overlay.remove();
+    $('#saveInfo').textContent = loaded ? 'Dados carregados' : 'Nenhum dado encontrado — comece um novo plano';
+    render();
+  })();
+})();
+</script>
+</body>
+</html>

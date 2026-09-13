@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // O app guarda todo o estado em um único documento:
+    // coleção "gestaoMudancas", documento "estado".
+    //
+    // ATENÇÃO: como o app não tem tela de login (mesmo comportamento da
+    // versão anterior em localStorage), esta regra libera leitura e
+    // escrita para qualquer pessoa que souber a URL do app publicado.
+    // Isso é aceitável para uso interno com link não divulgado, mas NÃO
+    // é seguro para um domínio público e indexável. Se quiser restringir
+    // o acesso mais tarde, a forma mais simples é habilitar o Firebase
+    // App Check no projeto e trocar a condição abaixo por
+    // "if request.auth != null" (exigindo login).
+    match /gestaoMudancas/estado {
+      allow read, write: if true;
+    }
+  }
+}
