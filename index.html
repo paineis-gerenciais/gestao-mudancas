@@ -322,7 +322,6 @@ td{font-size:.9rem}
   let plansMetaById = {};      // {planId: {id,name,description,date,facilitator,consolidatedActions,createdAt}}
   let groupsByPlanId = {};     // {planId: [grupo, grupo, ...]}
   let modalOpen = false;       // true enquanto um modal de edição está aberto
-  let pendingRender = false;   // true se chegou atualização remota durante a edição
   let plansReady = false, groupsReady = false;
 
   function planMetaOf(p){ const {groups, ...meta} = p; return meta; }
@@ -340,11 +339,17 @@ td{font-size:.9rem}
   }
 
   function rebuildStateFromCaches(){
+    // Enquanto um modal está aberto, o objeto de plano/grupo que ele está
+    // editando (`activePlan()`/`activeGroup()`) precisa continuar sendo o
+    // MESMO objeto do início ao fim — senão a edição feita no formulário
+    // fica presa num objeto "órfão" que não é mais salvo. Por isso saímos
+    // AQUI, antes de tocar em state.plans; ao fechar o modal, sincronizamos
+    // tudo de uma vez com o que chegou nesse meio-tempo.
+    if(modalOpen) return;
     state.plans = Object.keys(plansMetaById).map(id=>{
       const groups = (groupsByPlanId[id]||[]).slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
       return {...plansMetaById[id], groups};
     }).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
-    if(modalOpen){ pendingRender = true; return; }
     render();
   }
 
@@ -779,7 +784,7 @@ td{font-size:.9rem}
     root.innerHTML=`<div class="modal-back"><div class="modal" role="dialog" aria-modal="true"><div class="space"><h2>${esc(title)}</h2><button class="iconbtn" id="modalClose" type="button">✕</button></div><form id="modalForm"><div class="stack">${body}</div><div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn" id="modalCancel" type="button">Cancelar</button><button class="btn primary" type="submit">${esc(saveLabel)}</button></div></form></div></div>`;
     const closeWithoutSaving=()=>{
       root.innerHTML=''; modalOpen=false;
-      if(pendingRender){ pendingRender=false; render(); }
+      rebuildStateFromCaches();
     };
     $('#modalClose').onclick=$('#modalCancel').onclick=closeWithoutSaving;
     $('#modalForm').addEventListener('submit',e=>{
@@ -788,7 +793,6 @@ td{font-size:.9rem}
         root.innerHTML=''; modalOpen=false;
         persistScope(scope);
         render();
-        pendingRender=false;
       }
     });
   }
@@ -919,7 +923,7 @@ td{font-size:.9rem}
     const form=$('#modalForm'); const save=form.querySelector('button[type=submit]'); save.type='button';
     save.onclick=()=>{
       $('#modalRoot').innerHTML=''; modalOpen=false;
-      if(pendingRender){ pendingRender=false; render(); }
+      rebuildStateFromCaches();
     };
   }
 
