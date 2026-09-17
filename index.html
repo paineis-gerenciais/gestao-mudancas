@@ -298,7 +298,9 @@ td{font-size:.9rem}
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
   try{ db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(e){}
-  const STATE_DOC = db.collection('gestaoMudancas').doc('estado');
+  const LEGACY_STATE_DOC = db.collection('gestaoMudancas').doc('estado');
+  const plansCol = db.collection('plans');
+  const groupsCol = planId => plansCol.doc(planId).collection('groups');
   const EMPTY_STATE = {plans:[],activePlanId:null,activeGroupId:null,stage:'overview'};
   const $ = (s, root=document) => root.querySelector(s);
   const $$ = (s, root=document) => [...root.querySelectorAll(s)];
@@ -310,30 +312,171 @@ td{font-size:.9rem}
   const impactRef = i => String(i?.to || i?.item || '—');
 
   let state = JSON.parse(JSON.stringify(EMPTY_STATE));
-  let saveTimer = null;
 
-  async function loadState(){
-    try{
-      const snap = await STATE_DOC.get();
-      return snap.exists ? snap.data() : null;
-    }catch(e){
-      console.error('Erro ao carregar dados do Firestore:', e);
-      toast('Não foi possível carregar os dados. Verifique sua conexão.');
-      return null;
-    }
+  // --- Acesso simultâneo em tempo real -------------------------------
+  // Cada plano vira um documento em `plans/{planId}` (sem o array
+  // `groups`) e cada grupo de trabalho vira um documento em
+  // `plans/{planId}/groups/{groupId}`. Assim, salvar uma alteração num
+  // grupo grava só aquele documento, sem sobrescrever o resto do plano
+  // nem o que outras pessoas estejam editando em outros grupos/planos.
+  let plansMetaById = {};      // {planId: {id,name,description,date,facilitator,consolidatedActions,createdAt}}
+  let groupsByPlanId = {};     // {planId: [grupo, grupo, ...]}
+  let modalOpen = false;       // true enquanto um modal de edição está aberto
+  let pendingRender = false;   // true se chegou atualização remota durante a edição
+  let plansReady = false, groupsReady = false;
+
+  function planMetaOf(p){ const {groups, ...meta} = p; return meta; }
+
+  function normalizedPlanMeta(id, meta){
+    return {
+      id,
+      name: meta.name || '',
+      description: meta.description || '',
+      date: meta.date || '',
+      facilitator: meta.facilitator || '',
+      consolidatedActions: meta.consolidatedActions || [],
+      createdAt: meta.createdAt || 0
+    };
   }
-  function persist(msg=true){
-    STATE_DOC.set(state).then(()=>{
+
+  function rebuildStateFromCaches(){
+    state.plans = Object.keys(plansMetaById).map(id=>{
+      const groups = (groupsByPlanId[id]||[]).slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+      return {...plansMetaById[id], groups};
+    }).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+    if(modalOpen){ pendingRender = true; return; }
+    render();
+  }
+
+  function maybeHideOverlay(){
+    if(!plansReady || !groupsReady) return;
+    const overlay = document.getElementById('loadingOverlay');
+    if(overlay) overlay.remove();
+    $('#saveInfo').textContent = state.plans.length ? 'Dados carregados' : 'Nenhum dado encontrado — comece um novo plano';
+  }
+
+  function attachRealtimeListeners(){
+    plansCol.onSnapshot(snap=>{
+      plansMetaById = {};
+      snap.forEach(doc=>{ plansMetaById[doc.id] = normalizedPlanMeta(doc.id, doc.data()); });
+      plansReady = true; maybeHideOverlay();
+      rebuildStateFromCaches();
+    }, err=>{
+      console.error('Erro no listener de planos:', err);
+      toast('Conexão instável com o Firestore. Tentando novamente...');
+    });
+    db.collectionGroup('groups').onSnapshot(snap=>{
+      const byPlan = {};
+      snap.forEach(doc=>{
+        const planId = doc.ref.parent.parent.id;
+        const g = ensureGroupShape({id:doc.id, ...doc.data()});
+        (byPlan[planId] ||= []).push(g);
+      });
+      groupsByPlanId = byPlan;
+      groupsReady = true; maybeHideOverlay();
+      rebuildStateFromCaches();
+    }, err=>{
+      console.error('Erro no listener de grupos:', err);
+      toast('Conexão instável com o Firestore. Tentando novamente...');
+    });
+  }
+
+  function savePlanMeta(p, msg=true){
+    plansCol.doc(p.id).set(planMetaOf(p)).then(()=>{
       $('#saveInfo').textContent='Última alteração: '+nowBR();
       if(msg) toast('Alterações salvas automaticamente');
     }).catch(err=>{
-      console.error('Erro ao salvar no Firestore:', err);
+      console.error('Erro ao salvar plano no Firestore:', err);
       toast('Erro ao salvar. Verifique sua conexão.');
     });
   }
-  function scheduleSave(){
-    clearTimeout(saveTimer); saveTimer=setTimeout(()=>persist(false),250);
-    $('#saveInfo').textContent='Salvando...';
+  function saveGroup(planId, g, msg=true){
+    groupsCol(planId).doc(g.id).set(g).then(()=>{
+      $('#saveInfo').textContent='Última alteração: '+nowBR();
+      if(msg) toast('Alterações salvas automaticamente');
+    }).catch(err=>{
+      console.error('Erro ao salvar grupo no Firestore:', err);
+      toast('Erro ao salvar. Verifique sua conexão.');
+    });
+  }
+  function deleteGroupDoc(planId, groupId){
+    groupsCol(planId).doc(groupId).delete().catch(err=>{
+      console.error('Erro ao excluir grupo:', err);
+      toast('Erro ao excluir. Verifique sua conexão.');
+    });
+  }
+  async function deletePlanCascade(planId){
+    try{
+      const snap = await groupsCol(planId).get();
+      const batch = db.batch();
+      snap.forEach(doc=>batch.delete(doc.ref));
+      batch.delete(plansCol.doc(planId));
+      await batch.commit();
+    }catch(err){
+      console.error('Erro ao excluir plano:', err);
+      toast('Erro ao excluir. Verifique sua conexão.');
+    }
+  }
+  async function createPlanWithGroups(p){
+    const batch = db.batch();
+    batch.set(plansCol.doc(p.id), planMetaOf(p));
+    (p.groups||[]).forEach(g=>batch.set(groupsCol(p.id).doc(g.id), g));
+    try{ await batch.commit(); $('#saveInfo').textContent='Última alteração: '+nowBR(); }
+    catch(err){ console.error('Erro ao criar plano:', err); toast('Erro ao salvar. Verifique sua conexão.'); }
+  }
+  function persistScope(scope){
+    const p = activePlan();
+    if(!p) return;
+    if(scope==='plan'){ savePlanMeta(p); }
+    else { const g = activeGroup(); if(g) saveGroup(p.id, g); }
+  }
+  async function migrateLegacyIfNeeded(){
+    try{
+      const already = await plansCol.limit(1).get();
+      if(!already.empty) return;
+      const legacySnap = await LEGACY_STATE_DOC.get();
+      if(!legacySnap.exists) return;
+      const legacy = legacySnap.data();
+      if(!legacy || !Array.isArray(legacy.plans) || !legacy.plans.length) return;
+      const base = Date.now();
+      let batch = db.batch(), ops = 0;
+      const flush = async()=>{ if(ops){ await batch.commit(); batch = db.batch(); ops = 0; } };
+      for(let pi=0; pi<legacy.plans.length; pi++){
+        const p = legacy.plans[pi]; ensurePlanShape(p);
+        p.createdAt = p.createdAt || (base + pi*1000);
+        const meta = planMetaOf(p);
+        batch.set(plansCol.doc(p.id), meta); ops++;
+        if(ops>=400) await flush();
+        for(let gi=0; gi<p.groups.length; gi++){
+          const g = p.groups[gi]; ensureGroupShape(g);
+          g.createdAt = g.createdAt || (base + pi*1000 + gi);
+          batch.set(groupsCol(p.id).doc(g.id), g); ops++;
+          if(ops>=400) await flush();
+        }
+      }
+      await flush();
+      console.log('Migração de dados legados concluída: '+legacy.plans.length+' plano(s).');
+    }catch(e){
+      console.error('Erro na migração automática dos dados legados:', e);
+    }
+  }
+  async function importFullState(data){
+    const existing = await plansCol.get();
+    for(const planDoc of existing.docs){ await deletePlanCascade(planDoc.id); }
+    let batch = db.batch(), ops = 0;
+    const flush = async()=>{ if(ops){ await batch.commit(); batch = db.batch(); ops = 0; } };
+    for(const p of data.plans){
+      ensurePlanShape(p);
+      const meta = planMetaOf(p);
+      batch.set(plansCol.doc(p.id), meta); ops++;
+      if(ops>=400) await flush();
+      for(const g of p.groups){
+        ensureGroupShape(g);
+        batch.set(groupsCol(p.id).doc(g.id), g); ops++;
+        if(ops>=400) await flush();
+      }
+    }
+    await flush();
   }
   function toast(text){
     const t=$('#toast'); t.textContent=text; t.classList.add('show');
@@ -358,7 +501,6 @@ td{font-size:.9rem}
     p.groups ||= []; p.consolidatedActions ||= []; p.date ||= ''; p.facilitator ||= ''; p.description ||= '';
     p.groups.forEach(ensureGroupShape); return p;
   }
-  state.plans.forEach(ensurePlanShape);
 
   function groupCompletion(g){
     const factsDone=g.facts.length>0;
@@ -631,11 +773,24 @@ td{font-size:.9rem}
       <div class="card" style="margin-top:16px"><strong>Encadeamento da mudança</strong><div class="small muted" style="margin-top:5px">No consolidado, cada ação oriunda dos grupos mantém referência ao trabalho que a originou. Use “Ver cadeia completa” nos impactos para acompanhar fato → impacto → responsabilidades → validações → ações.</div></div>`;
   }
 
-  function openModal(title, body, onSave, saveLabel='Salvar'){
+  function openModal(title, body, onSave, saveLabel='Salvar', scope='group'){
+    modalOpen = true;
     const root=$('#modalRoot');
     root.innerHTML=`<div class="modal-back"><div class="modal" role="dialog" aria-modal="true"><div class="space"><h2>${esc(title)}</h2><button class="iconbtn" id="modalClose" type="button">✕</button></div><form id="modalForm"><div class="stack">${body}</div><div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn" id="modalCancel" type="button">Cancelar</button><button class="btn primary" type="submit">${esc(saveLabel)}</button></div></form></div></div>`;
-    $('#modalClose').onclick=$('#modalCancel').onclick=()=>root.innerHTML='';
-    $('#modalForm').addEventListener('submit',e=>{e.preventDefault(); if(onSave(new FormData(e.currentTarget))!==false){root.innerHTML='';persist(false);render()}});
+    const closeWithoutSaving=()=>{
+      root.innerHTML=''; modalOpen=false;
+      if(pendingRender){ pendingRender=false; render(); }
+    };
+    $('#modalClose').onclick=$('#modalCancel').onclick=closeWithoutSaving;
+    $('#modalForm').addEventListener('submit',e=>{
+      e.preventDefault();
+      if(onSave(new FormData(e.currentTarget))!==false){
+        root.innerHTML=''; modalOpen=false;
+        persistScope(scope);
+        render();
+        pendingRender=false;
+      }
+    });
   }
   const input=(name,label,val='',req=false,type='text')=>`<div class="field"><label>${label}${req?' *':''}</label><input name="${name}" type="${type}" value="${esc(val)}" ${req?'required':''}></div>`;
   const ta=(name,label,val='',req=false)=>`<div class="field"><label>${label}${req?' *':''}</label><textarea name="${name}" ${req?'required':''}>${esc(val)}</textarea></div>`;
@@ -651,17 +806,17 @@ td{font-size:.9rem}
     `,fd=>{
       if(existing){existing.name=fd.get('name').trim();existing.description=fd.get('description').trim();existing.date=fd.get('date');existing.facilitator=fd.get('facilitator').trim()}
       else{
-        const p={id:uid('plan'),name:fd.get('name').trim(),description:fd.get('description').trim(),date:fd.get('date'),facilitator:fd.get('facilitator').trim(),groups:[],consolidatedActions:[]};
+        const p={id:uid('plan'),name:fd.get('name').trim(),description:fd.get('description').trim(),date:fd.get('date'),facilitator:fd.get('facilitator').trim(),groups:[],consolidatedActions:[],createdAt:Date.now()};
         state.plans.push(p); state.activePlanId=p.id; state.activeGroupId=null; state.stage='overview';
       }
-    });
+    },'Salvar','plan');
   }
   function groupModal(existing){
     const p=activePlan();
     openModal(existing?'Editar grupo':'Novo grupo de trabalho',`${input('name','Nome do grupo',existing?.name||'',true)}${ta('description','Escopo / observações',existing?.description||'')}`,fd=>{
       if(existing){existing.name=fd.get('name').trim();existing.description=fd.get('description').trim()}
-      else{const g=ensureGroupShape({id:uid('group'),name:fd.get('name').trim(),description:fd.get('description').trim()});p.groups.push(g);state.activeGroupId=g.id}
-    });
+      else{const g=ensureGroupShape({id:uid('group'),name:fd.get('name').trim(),description:fd.get('description').trim(),createdAt:Date.now()});p.groups.push(g);state.activeGroupId=g.id}
+    },'Salvar','group');
   }
   function factModal(existing){
     const g=activeGroup();
@@ -747,7 +902,7 @@ td{font-size:.9rem}
     `,fd=>{
       const data={what:fd.get('what').trim(),who:fd.get('who').trim(),due:fd.get('due').trim(),verify:fd.get('verify').trim(),status:fd.get('status'),notes:fd.get('notes').trim(),sourceActionIds:d.sourceActionIds||[]};
       if(existing)Object.assign(existing,data);else p.consolidatedActions.push({id:uid('cons'),...data});
-    });
+    },'Salvar','plan');
   }
 
   function showChain(impactId){
@@ -761,7 +916,11 @@ td{font-size:.9rem}
       <div class="record"><strong>Validações (${vals.length})</strong>${vals.map(v=>`<div class="small" style="margin-top:6px">• ${esc(v.type)} — ${esc(v.comment)} <span class="muted">(${esc(v.status)})</span></div>`).join('')||'<div class="small muted">Nenhuma contribuição.</div>'}</div>
       <div class="record"><strong>Ações relacionadas (${acts.length})</strong>${acts.map(a=>`<div class="small" style="margin-top:6px">• ${esc(a.what)} — ${esc(a.who||'sem responsável')} <span class="muted">(${esc(a.status)})</span></div>`).join('')||'<div class="small muted">Nenhuma ação.</div>'}</div>
     `,()=>true,'Fechar');
-    const form=$('#modalForm'); const save=form.querySelector('button[type=submit]'); save.type='button'; save.onclick=()=>$('#modalRoot').innerHTML='';
+    const form=$('#modalForm'); const save=form.querySelector('button[type=submit]'); save.type='button';
+    save.onclick=()=>{
+      $('#modalRoot').innerHTML=''; modalOpen=false;
+      if(pendingRender){ pendingRender=false; render(); }
+    };
   }
 
   function printHeader(p, groupName=''){
@@ -876,47 +1035,47 @@ td{font-size:.9rem}
   document.addEventListener('click',e=>{
     const t=e.target.closest('button'); if(!t)return;
     if(t.id==='newPlanBtn') return planModal();
-    if(t.dataset.openPlan){state.activePlanId=t.dataset.openPlan;state.activeGroupId=activePlan()?.groups[0]?.id||null;state.stage='overview';persist(false);return render()}
+    if(t.dataset.openPlan){state.activePlanId=t.dataset.openPlan;state.activeGroupId=activePlan()?.groups[0]?.id||null;state.stage='overview';return render()}
     if(t.dataset.dupPlan){
       const p=state.plans.find(x=>x.id===t.dataset.dupPlan), copy=JSON.parse(JSON.stringify(p));
-      copy.id=uid('plan'); copy.name=p.name+' — cópia';
+      copy.id=uid('plan'); copy.name=p.name+' — cópia'; copy.createdAt=Date.now();
       copy.groups.forEach(g=>{g.id=uid('group');});
       copy.consolidatedActions.forEach(a=>a.id=uid('cons'));
-      state.plans.push(copy);persist(false);return renderHome();
+      state.plans.push(copy);createPlanWithGroups(copy);return renderHome();
     }
     if(t.dataset.delPlan){
       const p=state.plans.find(x=>x.id===t.dataset.delPlan);
-      if(confirm(`Excluir o plano "${p.name}" e todos os seus grupos?`)){state.plans=state.plans.filter(x=>x.id!==p.id);persist(false);renderHome()} return;
+      if(confirm(`Excluir o plano "${p.name}" e todos os seus grupos?`)){state.plans=state.plans.filter(x=>x.id!==p.id);deletePlanCascade(p.id);renderHome()} return;
     }
-    if(t.id==='backHomeBtn'){state.activePlanId=null;state.activeGroupId=null;state.stage='overview';persist(false);return renderHome()}
+    if(t.id==='backHomeBtn'){state.activePlanId=null;state.activeGroupId=null;state.stage='overview';return renderHome()}
     if(t.id==='mobileMenuBtn'){return $('#sidebar').classList.toggle('open')}
     if(t.dataset.stage){state.stage=t.dataset.stage;return renderPlan()}
     if(t.dataset.goto){state.stage=t.dataset.goto;return renderPlan()}
-    if(t.dataset.group){state.activeGroupId=t.dataset.group;state.stage=state.stage==='consolidated'?'overview':state.stage;persist(false);return renderPlan()}
+    if(t.dataset.group){state.activeGroupId=t.dataset.group;state.stage=state.stage==='consolidated'?'overview':state.stage;return renderPlan()}
     if(t.id==='addGroupBtn'||t.id==='overviewAddGroup')return groupModal();
     if(t.id==='editGroupBtn')return groupModal(activeGroup());
-    if(t.id==='deleteGroupBtn'){const g=activeGroup();if(g&&confirm(`Excluir o grupo "${g.name}" e todo o conteúdo produzido por ele?`)){const p=activePlan();p.groups=p.groups.filter(x=>x.id!==g.id);state.activeGroupId=p.groups[0]?.id||null;persist(false);renderPlan()}return}
+    if(t.id==='deleteGroupBtn'){const g=activeGroup();if(g&&confirm(`Excluir o grupo "${g.name}" e todo o conteúdo produzido por ele?`)){const p=activePlan();p.groups=p.groups.filter(x=>x.id!==g.id);state.activeGroupId=p.groups[0]?.id||null;deleteGroupDoc(p.id,g.id);renderPlan()}return}
     if(t.id==='editPlanBtn')return planModal(activePlan());
     if(t.id==='addFactBtn')return factModal();
     if(t.dataset.editFact)return factModal(activeGroup().facts.find(x=>x.id===t.dataset.editFact));
-    if(t.dataset.dupFact){const g=activeGroup(),f=g.facts.find(x=>x.id===t.dataset.dupFact);g.facts.push({id:uid('fact'),text:f.text+' — cópia',notes:f.notes});persist(false);return renderPlan()}
+    if(t.dataset.dupFact){const p=activePlan(),g=activeGroup(),f=g.facts.find(x=>x.id===t.dataset.dupFact);g.facts.push({id:uid('fact'),text:f.text+' — cópia',notes:f.notes});saveGroup(p.id,g);return renderPlan()}
     if(t.dataset.delFact){
-      const g=activeGroup(),id=t.dataset.delFact;
+      const p=activePlan(),g=activeGroup(),id=t.dataset.delFact;
       if(confirm('Excluir este fato? Impactos associados e seus vínculos também serão removidos.')){
         const impactIds=g.impacts.filter(i=>i.factId===id).map(i=>i.id);
         g.facts=g.facts.filter(f=>f.id!==id);g.impacts=g.impacts.filter(i=>i.factId!==id);
         g.responsibilities=g.responsibilities.filter(r=>!impactIds.includes(r.impactId));
         g.validations=g.validations.filter(v=>!impactIds.includes(v.impactId));
         g.actions.forEach(a=>{if(impactIds.includes(a.impactId))a.impactId=null});
-        persist(false);renderPlan();
+        saveGroup(p.id,g);renderPlan();
       } return;
     }
     if(t.id==='addImpactBtn')return impactModal();
     if(t.dataset.editImpact)return impactModal(activeGroup().impacts.find(x=>x.id===t.dataset.editImpact));
     if(t.dataset.delImpact){
-      const g=activeGroup(),id=t.dataset.delImpact;
+      const p=activePlan(),g=activeGroup(),id=t.dataset.delImpact;
       if(confirm('Excluir este impacto e suas responsabilidades/validações? As ações relacionadas serão mantidas como ações gerais.')){
-        g.impacts=g.impacts.filter(i=>i.id!==id);g.responsibilities=g.responsibilities.filter(r=>r.impactId!==id);g.validations=g.validations.filter(v=>v.impactId!==id);g.actions.forEach(a=>{if(a.impactId===id)a.impactId=null});persist(false);renderPlan()
+        g.impacts=g.impacts.filter(i=>i.id!==id);g.responsibilities=g.responsibilities.filter(r=>r.impactId!==id);g.validations=g.validations.filter(v=>v.impactId!==id);g.actions.forEach(a=>{if(a.impactId===id)a.impactId=null});saveGroup(p.id,g);renderPlan()
       }return;
     }
     if(t.dataset.chain)return showChain(t.dataset.chain);
@@ -924,20 +1083,20 @@ td{font-size:.9rem}
     if(t.id==='addGeneralValidationBtn')return validationModal(null);
     if(t.dataset.addValidation)return validationModal(t.dataset.addValidation);
     if(t.dataset.editValidation){const g=activeGroup(),v=g.validations.find(x=>x.id===t.dataset.editValidation);return validationModal(v.impactId,v)}
-    if(t.dataset.delValidation){const g=activeGroup();if(confirm('Excluir esta contribuição?')){g.validations=g.validations.filter(v=>v.id!==t.dataset.delValidation);persist(false);renderPlan()}return}
+    if(t.dataset.delValidation){const p=activePlan(),g=activeGroup();if(confirm('Excluir esta contribuição?')){g.validations=g.validations.filter(v=>v.id!==t.dataset.delValidation);saveGroup(p.id,g);renderPlan()}return}
     if(t.id==='addActionBtn')return actionModal();
     if(t.dataset.editAction)return actionModal(activeGroup().actions.find(x=>x.id===t.dataset.editAction));
-    if(t.dataset.delAction){const g=activeGroup();if(confirm('Excluir esta ação?')){g.actions=g.actions.filter(a=>a.id!==t.dataset.delAction);persist(false);renderPlan()}return}
+    if(t.dataset.delAction){const p=activePlan(),g=activeGroup();if(confirm('Excluir esta ação?')){g.actions=g.actions.filter(a=>a.id!==t.dataset.delAction);saveGroup(p.id,g);renderPlan()}return}
     if(t.id==='addManualConsolidatedBtn')return consolidatedModal();
     if(t.dataset.editConsolidated)return consolidatedModal(activePlan().consolidatedActions.find(x=>x.id===t.dataset.editConsolidated));
-    if(t.dataset.delConsolidated){const p=activePlan();if(confirm('Excluir esta ação do plano consolidado?')){p.consolidatedActions=p.consolidatedActions.filter(a=>a.id!==t.dataset.delConsolidated);persist(false);renderPlan()}return}
+    if(t.dataset.delConsolidated){const p=activePlan();if(confirm('Excluir esta ação do plano consolidado?')){p.consolidatedActions=p.consolidatedActions.filter(a=>a.id!==t.dataset.delConsolidated);savePlanMeta(p);renderPlan()}return}
     if(t.id==='addSelectedBtn'){
       const p=activePlan(), ids=$$('.candidate-check:checked').map(x=>x.dataset.sourceAction), all=allGroupActions(p);
       if(!ids.length)return toast('Selecione ao menos uma ação');
       ids.forEach(id=>{
         if(p.consolidatedActions.some(c=>c.sourceActionIds?.includes(id)))return;
         const a=all.find(x=>x.id===id); if(a)p.consolidatedActions.push({id:uid('cons'),sourceActionIds:[id],what:a.what,who:a.who,due:a.due,verify:a.verify,status:a.status,notes:'Origem: '+a.groupName});
-      });persist(false);return renderPlan();
+      });savePlanMeta(p);return renderPlan();
     }
     if(t.id==='mergeSelectedBtn'){
       const p=activePlan(), ids=$$('.candidate-check:checked').map(x=>x.dataset.sourceAction), all=allGroupActions(p).filter(a=>ids.includes(a.id));
@@ -945,7 +1104,12 @@ td{font-size:.9rem}
       const defaults={sourceActionIds:ids,what:unique(all.map(a=>a.what)).join(' / '),who:unique(all.flatMap(a=>splitNames(a.who))).join(', '),due:unique(all.map(a=>a.due)).join(' / '),verify:unique(all.map(a=>a.verify)).join(' / '),status:'Em elaboração',notes:'Consolidada a partir de: '+unique(all.map(a=>a.groupName)).join(', ')};
       return consolidatedModal(null,defaults);
     }
-    if(t.hasAttribute('data-save-now')){persist(false);return toast('Dados salvos com sucesso')}
+    if(t.hasAttribute('data-save-now')){
+      const p=activePlan(),g=activeGroup();
+      if(p) savePlanMeta(p,false);
+      if(p&&g) saveGroup(p.id,g,false);
+      return toast('Dados salvos com sucesso');
+    }
     if(t.id==='partialPrintBtn'){
       if(!activeGroup()) return toast('Selecione um grupo de trabalho');
       buildPartialPrintReport(); return window.print();
@@ -954,7 +1118,7 @@ td{font-size:.9rem}
   });
 
   document.addEventListener('change',e=>{
-    if(e.target.id==='validationDone'){activeGroup().validationDone=e.target.checked;persist(false);renderPlan()}
+    if(e.target.id==='validationDone'){const p=activePlan(),g=activeGroup();g.validationDone=e.target.checked;saveGroup(p.id,g);renderPlan()}
   });
 
   $('#exportTopBtn').addEventListener('click',()=>{
@@ -964,18 +1128,26 @@ td{font-size:.9rem}
   $('#importInput').addEventListener('change',e=>{
     const file=e.target.files?.[0]; if(!file)return;
     const r=new FileReader();
-    r.onload=()=>{try{const data=JSON.parse(r.result);if(!data||!Array.isArray(data.plans))throw new Error();if(!confirm('Importar este arquivo substituirá os dados atuais. Deseja continuar?'))return;state=data;state.plans.forEach(ensurePlanShape);persist(false);render();toast('Dados importados com sucesso')}catch(err){alert('Arquivo JSON inválido.')}finally{e.target.value=''}};
+    r.onload=()=>{
+      let data;
+      try{ data=JSON.parse(r.result); if(!data||!Array.isArray(data.plans)) throw new Error(); }
+      catch(err){ alert('Arquivo JSON inválido.'); e.target.value=''; return; }
+      if(!confirm('Importar este arquivo substituirá os dados atuais para todas as pessoas conectadas. Deseja continuar?')){ e.target.value=''; return; }
+      data.plans.forEach(ensurePlanShape);
+      toast('Importando dados...');
+      importFullState(data).then(()=>{
+        toast('Dados importados com sucesso');
+      }).catch(err=>{
+        console.error('Erro ao importar dados:', err);
+        toast('Erro ao importar. Verifique sua conexão.');
+      }).finally(()=>{ e.target.value=''; });
+    };
     r.readAsText(file);
   });
 
   (async function init(){
-    const loaded = await loadState();
-    state = loaded || JSON.parse(JSON.stringify(EMPTY_STATE));
-    state.plans.forEach(ensurePlanShape);
-    const overlay = document.getElementById('loadingOverlay');
-    if(overlay) overlay.remove();
-    $('#saveInfo').textContent = loaded ? 'Dados carregados' : 'Nenhum dado encontrado — comece um novo plano';
-    render();
+    await migrateLegacyIfNeeded();
+    attachRealtimeListeners();
   })();
 })();
 </script>

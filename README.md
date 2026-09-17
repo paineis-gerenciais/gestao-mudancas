@@ -13,11 +13,20 @@ vem a logo** (agora de um arquivo de imagem, não mais embutida no código).
 
 ## O que foi revisado
 
-- **Persistência**: `localStorage` → documento único no Firestore
-  (coleção `gestaoMudancas`, documento `estado`). O app carrega esse
-  documento ao abrir e grava nele a cada alteração, do mesmo jeito que
-  antes gravava no navegador — só que agora fica acessível de qualquer
-  dispositivo, pelo mesmo link.
+- **Persistência com acesso simultâneo em tempo real**: cada plano agora
+  é gravado como um documento próprio (`plans/{id}`), e cada grupo de
+  trabalho como um documento dentro dele
+  (`plans/{id}/groups/{id}`) — em vez de tudo junto num único
+  documento como antes. Isso permite que várias pessoas usem o app ao
+  mesmo tempo, cada uma vendo as alterações das outras aparecerem
+  automaticamente na tela, sem precisar recarregar a página — inclusive
+  duas pessoas em grupos diferentes do mesmo plano, editando em
+  paralelo sem uma atrapalhar a outra. Mais detalhes em
+  "Acesso simultâneo", abaixo.
+- **Migração automática dos dados antigos**: se o Firestore já tinha
+  dados no formato anterior (documento único), a primeira vez que o app
+  for aberto após este deploy ele migra tudo automaticamente para a
+  nova estrutura, sem precisar de nenhuma ação manual.
 - **Exemplo removido do código**: o plano de exemplo que vinha embutido
   no HTML foi retirado do arquivo e exportado para
   `exemplo-gestao-mudancas.json`. Ele não é mais carregado
@@ -34,6 +43,19 @@ vem a logo** (agora de um arquivo de imagem, não mais embutida no código).
   código do app.
 - Arquivo ficou ~97% mais leve (as imagens deixaram de estar duplicadas
   em texto dentro do HTML).
+
+## Atualizando uma implantação já existente
+
+Se este app já estava publicado (com a versão de documento único), a
+atualização é simples:
+
+1. Publique as novas `firestore.rules` no console do Firebase (elas
+   mudaram — veja o passo 2 abaixo).
+2. Suba o novo `index.html` para o GitHub (substitua o arquivo, mesmo
+   nome).
+3. Pronto. Na primeira vez que alguém abrir o app depois disso, a
+   migração automática copia os dados antigos para a nova estrutura —
+   não precisa fazer nada manualmente no Firestore.
 
 ## Estrutura dos arquivos
 
@@ -128,20 +150,44 @@ Se preferir usar nomes de arquivo diferentes ou formatos diferentes
 `index.html` (aparecem duas vezes cada: uma no cabeçalho, outra no
 modelo de impressão).
 
+## Acesso simultâneo
+
+- Cada **plano** é um documento (`plans/{planId}`) e cada **grupo de
+  trabalho** é outro documento dentro dele
+  (`plans/{planId}/groups/{groupId}`). O app mantém dois "ouvintes" em
+  tempo real do Firestore (um para a lista de planos, outro para todos
+  os grupos de todos os planos) — qualquer alteração salva por
+  qualquer pessoa chega automaticamente para todas as outras que
+  estiverem com o app aberto, sem precisar recarregar.
+- **Duas pessoas em planos ou grupos diferentes**: trabalham em
+  paralelo sem qualquer risco de uma sobrescrever os dados da outra,
+  porque cada uma grava num documento distinto.
+- **Duas pessoas no mesmo grupo ao mesmo tempo**: cada uma vê os fatos,
+  impactos, responsabilidades, validações e ações que a outra for
+  salvando aparecerem na tela. Se as duas editarem exatamente o mesmo
+  item quase ao mesmo tempo, **a última gravação vence** (a mesma regra
+  simples que já existia antes, com `localStorage` — sem bloqueio, sem
+  aviso de conflito).
+- **Enquanto uma janela de edição (modal) está aberta**, o app pausa a
+  atualização da tela para não fechar o que você está digitando ou
+  perder o foco do campo — mas continua recebendo os dados por trás.
+  Assim que você salva ou fecha a janela, a tela é atualizada com tudo
+  o que chegou nesse meio-tempo.
+- Não há tela de login: qualquer pessoa com o link do app publicado
+  consegue ler e editar os dados (mesmo nível de "proteção" que o
+  `localStorage` já tinha antes — nenhum). Veja o comentário dentro de
+  `firestore.rules` para uma sugestão de evolução futura com
+  autenticação.
+
 ## Observações técnicas
 
 - O app continua sendo um único arquivo HTML/CSS/JS (sem build, sem
   dependências além do SDK do Firebase, carregado via CDN).
-- Os dados de todos os planos ficam em **um único documento** do
-  Firestore, do mesmo jeito que antes ficavam em um único item do
-  `localStorage`. Isso preserva o comportamento original (sem
-  colaboração simultânea em tempo real entre abas/dispositivos — quem
-  salvar por último sobrescreve). Se no futuro for necessário suportar
-  várias pessoas editando ao mesmo tempo, o próximo passo natural seria
-  separar os planos em subcoleções do Firestore — isso é uma mudança de
-  arquitetura maior e não foi feita aqui para não alterar o
-  funcionamento atual do app.
-- A regra do Firestore incluída libera leitura/escrita para quem tiver
-  o link do app (sem login), reproduzindo o mesmo nível de "proteção"
-  que o `localStorage` já tinha (nenhum). Veja o comentário dentro de
-  `firestore.rules` para uma sugestão de evolução futura com autenticação.
+- A exportação/importação de JSON (botões "Exportar" e "Importar JSON")
+  continua no mesmo formato de antes — um backup exportado da versão
+  anterior pode ser importado normalmente nesta versão, e vice-versa.
+  Importar um arquivo agora substitui os dados **para todas as pessoas
+  conectadas**, não só no seu navegador.
+- O documento antigo (`gestaoMudancas/estado`) só é lido uma vez, na
+  migração automática — depois disso o app não usa mais essa coleção.
+  Pode apagá-la do Firestore mais adiante, se quiser (não é obrigatório).
